@@ -34,13 +34,13 @@ CREATE TYPE "ensino" AS ENUM (
 CREATE TABLE "escola" (
                           "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
                           "nome" varchar(255) NOT NULL,
-                          "tipo" tipo_escola NOT NULL
+                          "tipo" tipo_escola NOT NULL,
+                          "endereco" varchar(255) NOT NULL
 );
 
 CREATE TABLE "usuario" (
                            "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-                           "escola_id" uuid NOT NULL,
-                           "nome" varchar(100) NOT NULL,
+                           "nome" varchar(255) NOT NULL,
                            "email" varchar(150) UNIQUE NOT NULL,
                            "senha" varchar(255) NOT NULL,
                            "deletado" bool NOT NULL DEFAULT false
@@ -48,8 +48,7 @@ CREATE TABLE "usuario" (
 
 CREATE TABLE "tipo_uniforme" (
                                  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-                                 "escola_id" uuid NOT NULL,
-                                 "tipo" varchar(100) NOT NULL
+                                 "tipo" varchar(255) NOT NULL
 );
 
 CREATE TABLE "uniforme" (
@@ -64,7 +63,6 @@ CREATE TABLE "uniforme" (
 
 CREATE TABLE "turma" (
                          "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-                         "escola_id" uuid NOT NULL,
                          "nome" varchar(255) NOT NULL,
                          "turno" turno NOT NULL,
                          "ensino" ensino NOT NULL
@@ -72,7 +70,6 @@ CREATE TABLE "turma" (
 
 CREATE TABLE "aluno" (
                          "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-                         "escola_id" uuid NOT NULL,
                          "turma_id" uuid NOT NULL,
                          "nome" varchar(255) NOT NULL,
                          "deletado" bool NOT NULL DEFAULT false
@@ -115,15 +112,7 @@ CREATE TABLE "lote" (
 
 CREATE INDEX "idx_nome" ON "aluno" ("nome");
 
-ALTER TABLE "usuario" ADD FOREIGN KEY ("escola_id") REFERENCES "escola" ("id") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "tipo_uniforme" ADD FOREIGN KEY ("escola_id") REFERENCES "escola" ("id") DEFERRABLE INITIALLY IMMEDIATE;
-
 ALTER TABLE "uniforme" ADD FOREIGN KEY ("tipo_id") REFERENCES "tipo_uniforme" ("id") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "turma" ADD FOREIGN KEY ("escola_id") REFERENCES "escola" ("id") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "aluno" ADD FOREIGN KEY ("escola_id") REFERENCES "escola" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "aluno" ADD FOREIGN KEY ("turma_id") REFERENCES "turma" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 

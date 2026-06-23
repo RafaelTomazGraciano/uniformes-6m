@@ -3,10 +3,7 @@ package com.six_m.uniform.domain.lote;
 import com.six_m.uniform.domain.itemLote.ItemLote;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +11,7 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Getter
 @Setter
 @Entity

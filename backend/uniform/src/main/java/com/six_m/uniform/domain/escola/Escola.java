@@ -2,15 +2,13 @@ package com.six_m.uniform.domain.escola;
 
 import com.six_m.uniform.enums.TipoEscola;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Getter
 @Setter
 @Entity
@@ -23,5 +21,6 @@ public class Escola {
 
     private String nome;
 
+    @Enumerated(EnumType.STRING)
     private TipoEscola tipo;
 }
