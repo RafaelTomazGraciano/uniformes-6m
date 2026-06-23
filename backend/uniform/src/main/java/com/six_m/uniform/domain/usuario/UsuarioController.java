@@ -1,7 +1,7 @@
 package com.six_m.uniform.domain.usuario;
 
-import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuario;
-import com.six_m.uniform.domain.usuario.dto.ResponseRegistrarUsuario;
+import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
+import com.six_m.uniform.domain.usuario.dto.ResponseUsuarioDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,8 +19,8 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
 
     @PostMapping("/registrar")
-    public ResponseEntity<ResponseRegistrarUsuario> registrarUsuario(@Valid @RequestBody RequestRegistrarUsuario request) {
-        ResponseRegistrarUsuario response = usuarioService.registrarUsuario(request);
+    public ResponseEntity<ResponseUsuarioDTO> registrarUsuario(@Valid @RequestBody RequestRegistrarUsuarioDTO request) {
+        ResponseUsuarioDTO response = usuarioService.registrarUsuario(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

@@ -1,8 +1,7 @@
 package com.six_m.uniform.domain.usuario;
 
-import com.six_m.uniform.domain.escola.EscolaRepository;
-import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuario;
-import com.six_m.uniform.domain.usuario.dto.ResponseRegistrarUsuario;
+import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
+import com.six_m.uniform.domain.usuario.dto.ResponseUsuarioDTO;
 import com.six_m.uniform.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,7 +16,7 @@ public class UsuarioService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public ResponseRegistrarUsuario registrarUsuario(RequestRegistrarUsuario dto) throws BadRequestException {
+    public ResponseUsuarioDTO registrarUsuario(RequestRegistrarUsuarioDTO dto) throws BadRequestException {
         if(usuarioRepository.findByEmail(dto.email()).isPresent()){
             throw new BadRequestException("Este email já está em uso");
         }
@@ -30,7 +29,7 @@ public class UsuarioService {
 
         usuario = usuarioRepository.save(usuario);
 
-        return new ResponseRegistrarUsuario(usuario.getId(), usuario.getNome(), usuario.getEmail());
+        return new ResponseUsuarioDTO(usuario.getId(), usuario.getNome(), usuario.getEmail());
     }
 
 }

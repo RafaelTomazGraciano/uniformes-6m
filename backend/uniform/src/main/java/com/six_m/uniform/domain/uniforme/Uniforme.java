@@ -37,6 +37,7 @@ public class Uniforme {
     @Enumerated(EnumType.STRING)
     private Sexo sexo;
 
+    @Builder.Default
     private Boolean devolvido = false;
 
     @Builder.Default

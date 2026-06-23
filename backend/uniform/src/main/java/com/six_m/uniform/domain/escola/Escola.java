@@ -23,4 +23,6 @@ public class Escola {
 
     @Enumerated(EnumType.STRING)
     private TipoEscola tipo;
+
+    private String endereco;
 }
