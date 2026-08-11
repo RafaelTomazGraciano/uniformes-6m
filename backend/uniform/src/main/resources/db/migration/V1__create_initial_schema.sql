@@ -41,7 +41,7 @@ CREATE TABLE "escola" (
 CREATE TABLE "usuario" (
                            "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
                            "nome" varchar(255) NOT NULL,
-                           "email" varchar(150) UNIQUE NOT NULL,
+                           "email" varchar(255) UNIQUE NOT NULL,
                            "senha" varchar(255) NOT NULL,
                            "deletado" bool NOT NULL DEFAULT false
 );
