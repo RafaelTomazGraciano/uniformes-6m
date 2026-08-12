@@ -1,30 +1,6 @@
 # Backend
 
-### Registrar o usuário
-
-**api/usuario/registrar**
-
-```json
-{
-    "nome": "teste",
-    "email": "teste@teste.com",
-    "senha": "123456"
-}
-```
-
-
-### Login
-
-**api/auth/login**
-
-```json
-{
-    "email": "teste@teste.com",
-    "senha": "123456"
-}
-```
-
-# Implementação 
+# Implementação
 
 ```java
 @PostMapping
@@ -34,7 +10,6 @@ public ResponseEntity<?> criar(@RequestBody PedidoRequestDTO dto,
     pedidoService.criar(dto, usuario);
 }
 ```
-
 
 ```json
 "dataEfetivada": "2025-06-17T14:30:00"
