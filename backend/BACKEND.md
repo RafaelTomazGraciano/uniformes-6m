@@ -48,7 +48,7 @@ O email será pego do token, então não precisa passar o email no body.
 DELETE - deletar o usuário
 **usuario/deletar**
 
-Ele passa o jwt no header, já que usuário estará autenticado, pois o usuário pode deletar seu próprio registro, então não precisa passar o id do usuário.
+Ele passa o jwt no header, já que usuário estará autenticado, pois o usuário só pode deletar seu próprio registro, então não precisa passar o id do usuário.
 
 ### Auth
 
@@ -64,7 +64,47 @@ POST - login do usuário
 }
 ```
 
-# Implementação 
+## Docker
+
+### Subindo o projeto pela primeira vez
+
+```bash
+docker compose up -d --build
+```
+
+A API estará disponível em `http://localhost:8080`.
+
+### Verificando os logs
+
+```bash
+docker compose logs -f backend
+docker compose logs -f db
+```
+
+### Atualizando o backend após mudanças no código
+
+Sempre que alterar o código-fonte, é preciso rebuildar a imagem do backend:
+
+```bash
+docker compose up -d --build backend
+```
+
+Se quiser derrubar e recriar tudo do zero (útil se mexeu no `Dockerfile` ou `docker-compose.yml`):
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+### Apagando tudo, incluindo os dados do banco
+
+```bash
+docker compose down -v
+```
+
+⚠️ O comando acima remove o volume `uniform_data` e apaga todos os dados do Postgres.
+
+## Implementação 
 
 ```java
 @PostMapping
