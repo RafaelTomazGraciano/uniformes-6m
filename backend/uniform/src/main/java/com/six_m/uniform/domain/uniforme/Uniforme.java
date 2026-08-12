@@ -4,7 +4,10 @@ import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
 import com.six_m.uniform.enums.Sexo;
 import com.six_m.uniform.enums.Tamanho;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -12,7 +15,6 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @Getter
 @Setter
 @Entity
@@ -29,17 +31,14 @@ public class Uniforme {
     @JoinColumn(name = "tipo_id", nullable = false)
     private TipoUniforme tipoUniforme;
 
-    @Enumerated(EnumType.STRING)
     private Tamanho tamanho;
 
     private Integer quantidade;
 
-    @Enumerated(EnumType.STRING)
     private Sexo sexo;
 
     private Boolean devolvido = false;
 
-    @Builder.Default
     private Boolean deletado = false;
 
 
