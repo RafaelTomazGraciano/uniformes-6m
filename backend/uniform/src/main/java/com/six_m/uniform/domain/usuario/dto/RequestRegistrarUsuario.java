@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
-public record RequestRegistrarUsuarioDTO(
+public record RequestRegistrarUsuario(
         @NotEmpty(message = "Nome é obrigatório")
         String nome,
         @Email(message = "O formato do email é inválido")

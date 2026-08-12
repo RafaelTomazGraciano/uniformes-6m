@@ -1,22 +1,7 @@
 # Backend
 
-Java 25
+### Registrar o usuário
 
-## Endpoints
-
-### Escola
-
-GET - buscar todas as escolas
-**http://localhost:8080/api/escola?page=0&size=10**
-
-GET - buscar uma escola pelo id
-**http://localhost:8080/api/escola/{id}**
-
-### Usuário
-
-#### Registrar o usuário
-
-POST - registrar o usuário
 **api/usuario/registrar**
 
 ```json
@@ -28,9 +13,8 @@ POST - registrar o usuário
 ```
 
 
-#### Login
+### Login
 
-POST - login do usuário
 **api/auth/login**
 
 ```json
