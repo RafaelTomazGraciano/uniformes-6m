@@ -3,7 +3,10 @@ package com.six_m.uniform.domain.aluno;
 import com.six_m.uniform.domain.escola.Escola;
 import com.six_m.uniform.domain.turma.Turma;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -11,7 +14,6 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @Getter
 @Setter
 @Entity
@@ -25,11 +27,14 @@ public class Aluno {
     private UUID id;
 
     @ManyToOne
+    @JoinColumn(name = "escola_id", nullable = false)
+    private Escola escola;
+
+    @ManyToOne
     @JoinColumn(name = "turma_id", nullable = false)
     private Turma turma;
 
     private String nome;
 
-    @Builder.Default
     private Boolean deletado = false;
 }

@@ -4,7 +4,10 @@ import com.six_m.uniform.domain.aluno.Aluno;
 import com.six_m.uniform.domain.pedidoUniforme.PedidoUniforme;
 import com.six_m.uniform.domain.usuario.Usuario;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,7 +15,6 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @Getter
 @Setter
 @Entity
