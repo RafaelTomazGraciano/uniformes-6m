@@ -54,7 +54,7 @@ public class UsuarioService {
     }
 
     @Transactional
-    public String deletarUsuario() throws BadRequestException {
+    public MessageResponseDTO deletarUsuario() throws BadRequestException {
         String emailAutenticado = SecurityContextHolder.getContext()
                 .getAuthentication()
                 .getName();
@@ -67,7 +67,7 @@ public class UsuarioService {
 
         usuarioRepository.delete(usuario);
 
-        return "Usuário deletado com sucesso";
+        return new MessageResponseDTO("Usuário deletado com sucesso");
     }
 
 }

@@ -61,7 +61,7 @@ public class UsuarioServiceTest {
         ResponseUsuarioDTO response = usuarioService.registrarUsuario(dto);
 
         assertEquals(idGerado, response.idUsuario());
-        assertEquals("Rafael", response.name());
+        assertEquals("Rafael", response.nome());
         assertEquals("rafael@teste.com", response.email());
     }
 
@@ -124,7 +124,7 @@ public class UsuarioServiceTest {
         ResponseUsuarioDTO response = usuarioService.atualizarUsuario(dto);
 
         assertEquals(id, response.idUsuario());
-        assertEquals("Rafael Atualizado", response.name());
+        assertEquals("Rafael Atualizado", response.nome());
         assertEquals("novo@teste.com", response.email());
     }
 
