@@ -2,6 +2,7 @@ package com.six_m.uniform.domain.usuario;
 
 import com.six_m.uniform.domain.usuario.dto.*;
 import com.six_m.uniform.exception.BadRequestException;
+import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;

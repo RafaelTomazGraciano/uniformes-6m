@@ -3,6 +3,7 @@ package com.six_m.uniform.domain;
 import com.six_m.uniform.domain.usuario.Usuario;
 import com.six_m.uniform.domain.usuario.UsuarioRepository;
 import com.six_m.uniform.domain.usuario.UsuarioService;
+import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestAtualizarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.ResponseUsuarioDTO;
@@ -176,9 +177,9 @@ public class UsuarioServiceTest {
         when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuario));
         when(usuarioRepository.saveAndFlush(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        String resultado = usuarioService.deletarUsuario();
+        MessageResponseDTO resultado = usuarioService.deletarUsuario();
 
-        assertEquals("Usuário deletado com sucesso", resultado);
+        assertEquals("Usuário deletado com sucesso", resultado.message());
 
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).saveAndFlush(captor.capture());

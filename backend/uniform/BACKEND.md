@@ -368,6 +368,219 @@ Retornados quando os campos do `@RequestBody` não passam nas anotações de val
 O front pode usar as chaves de `errors` (nome do campo) para destacar o input correspondente no formulário.
  
 ---
+
+Analisei a mudança de estilo — você tirou as tabelas de campo/validação, as tabelas de "possíveis erros" por endpoint (ficou só a seção global "Formato de erro" no final) e o índice. Segui exatamente esse padrão mais enxuto na seção de Turma:
+
+
+### Turma
+
+#### Criar turma
+
+```
+POST /turma
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Request body:**
+
+```json
+{
+  "nome": "Turma A",
+  "turno": "DIURNO",
+  "ensino": "FUNDAMENTAL"
+}
+```
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "nome": "Turma A",
+  "turno": "DIURNO",
+  "ensino": "FUNDAMENTAL"
+}
+```
+
+---
+
+#### Listar turmas (paginado)
+
+```
+GET /turma?page=0&size=10
+```
+
+🔒 **Requer token.** Retorna uma lista paginada de turmas.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Query params:**
+
+| Parâmetro | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|:---:|:---:|---|
+| `page` | number | ❌ | `0` | Número da página (começa em 0) |
+| `size` | number | ❌ | `20` | Quantidade de itens por página |
+
+**Response `200 OK`:**
+
+```json
+{
+  "content": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "nome": "Turma A",
+      "turno": "DIURNO",
+      "ensino": "FUNDAMENTAL"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "offset": 0,
+    "paged": true,
+    "unpaged": false,
+    "sort": {
+      "sorted": false,
+      "unsorted": true,
+      "empty": true
+    }
+  },
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0,
+  "sort": {
+    "sorted": false,
+    "unsorted": true,
+    "empty": true
+  },
+  "first": true,
+  "last": true,
+  "numberOfElements": 1,
+  "empty": false
+}
+```
+
+---
+
+#### Buscar turma por ID
+
+```
+GET /turma/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador da turma |
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "nome": "Turma A",
+  "turno": "DIURNO",
+  "ensino": "FUNDAMENTAL"
+}
+```
+
+---
+
+#### Atualizar turma
+
+```
+PUT /turma/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador da turma |
+
+**Request body:**
+
+```json
+{
+  "nome": "Turma A - Atualizada",
+  "turno": "NOTURNO",
+  "ensino": "MEDIO"
+}
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "nome": "Turma A - Atualizada",
+  "turno": "NOTURNO",
+  "ensino": "MEDIO"
+}
+```
+
+---
+
+#### Deletar turma
+
+```
+DELETE /turma/{id}
+```
+
+🔒 **Requer token.** Só é possível deletar uma turma se não houver nenhum aluno (não deletado) vinculado a ela.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador da turma |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "Turma deletada com sucesso"
+}
+```
+
+---
  
 ## Enums do sistema
  
@@ -434,11 +647,6 @@ public ResponseEntity<?> criar(@RequestBody PedidoRequestDTO dto,
     // usuario vem do token, não do DTO
     pedidoService.criar(dto, usuario);
 }
-```
-
-
-```json
-"dataEfetivada": "2025-06-17T14:30:00"
 ```
 
 Docker PostgreSQL:

@@ -7,5 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface AlunoRepository extends JpaRepository<Aluno, UUID> {
-
+    boolean existsByTurmaId(UUID turmaId);
 }

@@ -1,6 +1,6 @@
 package com.six_m.uniform.domain.usuario;
 
-import com.six_m.uniform.domain.usuario.dto.MessageResponseDTO;
+import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestAtualizarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.ResponseUsuarioDTO;

@@ -1,6 +1,6 @@
 package com.six_m.uniform.domain.escola;
 
-import com.six_m.uniform.enums.TipoEscola;
+import com.six_m.uniform.shared.enums.TipoEscola;
 import jakarta.persistence.*;
 import lombok.*;
 
