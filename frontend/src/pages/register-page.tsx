@@ -11,7 +11,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="dark min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-3xl items-center justify-center md:min-h-[calc(100vh-4rem)]">
         <div className="relative w-full overflow-hidden rounded-3xl bg-background shadow-[0_30px_60px_rgba(0,0,0,0.2)]">
           <div className="m-4 rounded-xl bg-card md:m-8">

@@ -3,8 +3,10 @@ import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { LoginPage } from '@/pages/login-page'
+import { NotFoundPage } from '@/pages/not-found-page'
 import { RegisterPage } from '@/pages/register-page'
 
 const queryClient = new QueryClient({
@@ -20,14 +22,17 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <Navigate to="/login" replace />,
+    errorElement: <NotFoundPage />,
   },
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <NotFoundPage />,
   },
   {
     path: '/register',
     element: <RegisterPage />,
+    errorElement: <NotFoundPage />,
   },
   {
     path: '/dashboard',
@@ -36,14 +41,21 @@ const router = createBrowserRouter([
         <DashboardPage />
       </ProtectedRoute>
     ),
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
   },
 ])
 
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster position="top-right" richColors closeButton />
+      <TooltipProvider>
+        <RouterProvider router={router} />
+        <Toaster position="top-right" richColors closeButton />
+      </TooltipProvider>
     </QueryClientProvider>
   )
 }

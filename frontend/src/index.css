@@ -135,12 +135,12 @@ input {
   --chart-3: #87888c;
   --chart-4: #2d2e39;
   --chart-5: #171821;
-  --sidebar: #21222d;
-  --sidebar-foreground: #ffffff;
+  --sidebar: #171821;
+  --sidebar-foreground: #87888c;
   --sidebar-primary: #fcb859;
   --sidebar-primary-foreground: #21222d;
-  --sidebar-accent: #2d2e39;
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent: #a9dfd8;
+  --sidebar-accent-foreground: #171821;
   --sidebar-border: #87888c;
   --sidebar-ring: #fcb859;
 }
