@@ -27,7 +27,7 @@ services:
       DB_URL: jdbc:postgresql://db:5432/uniform
       DB_USERNAME: uniform
       DB_PASSWORD: postgresUniform
-      JWT_SECRET: segredo-forte
+      API_SECURITY_TOKEN_SECRET: segredo-forte
     ports:
       - "8080:8080"
     restart: unless-stopped
