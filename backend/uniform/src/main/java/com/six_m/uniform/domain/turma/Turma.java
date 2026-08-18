@@ -1,9 +1,11 @@
 package com.six_m.uniform.domain.turma;
 
-import com.six_m.uniform.enums.Ensino;
-import com.six_m.uniform.enums.Turno;
+import com.six_m.uniform.shared.enums.Ensino;
+import com.six_m.uniform.shared.enums.Turno;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -23,9 +25,11 @@ public class Turma {
     private String nome;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Turno turno;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Ensino ensino;
 
 }

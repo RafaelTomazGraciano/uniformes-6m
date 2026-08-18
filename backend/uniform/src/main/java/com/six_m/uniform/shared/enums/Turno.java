@@ -1,4 +1,4 @@
-package com.six_m.uniform.enums;
+package com.six_m.uniform.shared.enums;
 
 public enum Turno {
     DIURNO("DIURNO"),

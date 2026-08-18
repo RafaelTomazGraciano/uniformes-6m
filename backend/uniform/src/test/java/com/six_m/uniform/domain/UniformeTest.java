@@ -1,8 +1,8 @@
 package com.six_m.uniform.domain;
 
 import com.six_m.uniform.domain.uniforme.Uniforme;
-import com.six_m.uniform.enums.Sexo;
-import com.six_m.uniform.enums.Tamanho;
+import com.six_m.uniform.shared.enums.Sexo;
+import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

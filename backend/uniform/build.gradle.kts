@@ -25,11 +25,12 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-flyway")
 	implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("com.auth0:java-jwt:4.5.2")
+	implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))
+	developmentOnly("me.paulschwarz:springboot4-dotenv")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.flywaydb:flyway-core")
 	annotationProcessor("org.projectlombok:lombok")
-
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testCompileOnly("org.projectlombok:lombok")
 	testAnnotationProcessor("org.projectlombok:lombok")

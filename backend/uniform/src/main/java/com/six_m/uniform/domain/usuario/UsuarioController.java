@@ -1,5 +1,6 @@
 package com.six_m.uniform.domain.usuario;
 
+import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestAtualizarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.ResponseUsuarioDTO;
@@ -29,8 +30,8 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/deletar")
-    public ResponseEntity<String> deletarUsuario() {
-        String response = usuarioService.deletarUsuario();
+    public ResponseEntity<MessageResponseDTO> deletarUsuario() {
+        MessageResponseDTO response = usuarioService.deletarUsuario();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 

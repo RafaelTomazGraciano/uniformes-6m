@@ -2,8 +2,8 @@ package com.six_m.uniform.domain.itemLote;
 
 import com.six_m.uniform.domain.lote.Lote;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
-import com.six_m.uniform.enums.Sexo;
-import com.six_m.uniform.enums.Tamanho;
+import com.six_m.uniform.shared.enums.Sexo;
+import com.six_m.uniform.shared.enums.Tamanho;
 import jakarta.persistence.*;
 import lombok.*;
 

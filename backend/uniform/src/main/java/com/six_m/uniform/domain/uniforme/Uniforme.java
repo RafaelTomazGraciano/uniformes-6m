@@ -1,8 +1,8 @@
 package com.six_m.uniform.domain.uniforme;
 
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
-import com.six_m.uniform.enums.Sexo;
-import com.six_m.uniform.enums.Tamanho;
+import com.six_m.uniform.shared.enums.Sexo;
+import com.six_m.uniform.shared.enums.Tamanho;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;

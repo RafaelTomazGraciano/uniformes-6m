@@ -4,7 +4,7 @@ import com.six_m.uniform.domain.escola.Escola;
 import com.six_m.uniform.domain.escola.EscolaRepository;
 import com.six_m.uniform.domain.escola.EscolaService;
 import com.six_m.uniform.domain.escola.dto.ResponseEscolaDTO;
-import com.six_m.uniform.enums.TipoEscola;
+import com.six_m.uniform.shared.enums.TipoEscola;
 import com.six_m.uniform.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
