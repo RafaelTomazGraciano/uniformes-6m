@@ -331,46 +331,6 @@ Authorization: Bearer <token>
 ```
  
 ---
- 
-## Formato de erro
- 
-Todos os erros da API seguem um dos dois formatos abaixo.
- 
-### Erros de negócio (`400` e `404`)
- 
-Retornados quando uma regra de negócio falha (ex: email já cadastrado, recurso não encontrado). Corpo simples com uma mensagem:
- 
-```json
-{
-  "message": "Este email já está em uso"
-}
-```
- 
-| Status | Quando acontece |
-|---|---|
-| `404 Not Found` | Recurso não encontrado (ex: escola com ID inexistente) |
-| `400 Bad Request` | Regra de negócio violada (ex: email duplicado) |
- 
-### Erros de validação (`400`)
- 
-Retornados quando os campos do `@RequestBody` não passam nas anotações de validação (`@NotEmpty`, `@Email`, `@Size`, etc). O corpo traz um `errors` com uma entrada por campo inválido:
- 
-```json
-{
-  "message": "Validation failed",
-  "errors": {
-    "email": "O formato do email é inválido",
-    "senha": "A senha deve ter no mínimo 6 caracteres"
-  }
-}
-```
- 
-O front pode usar as chaves de `errors` (nome do campo) para destacar o input correspondente no formulário.
- 
----
-
-Analisei a mudança de estilo — você tirou as tabelas de campo/validação, as tabelas de "possíveis erros" por endpoint (ficou só a seção global "Formato de erro" no final) e o índice. Segui exatamente esse padrão mais enxuto na seção de Turma:
-
 
 ### Turma
 
@@ -580,6 +540,251 @@ Authorization: Bearer <token>
 }
 ```
 
+---
+
+### Aluno
+
+#### Criar aluno
+
+```
+POST /aluno
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Request body:**
+
+```json
+{
+  "nome": "João da Silva",
+  "turmaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "nome": "João da Silva",
+  "turmaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "turmaNome": "Turma A"
+}
+```
+ 
+---
+
+#### Listar alunos (paginado)
+
+```
+GET /aluno?page=0&size=10
+```
+
+🔒 **Requer token.** Retorna uma lista paginada de alunos.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Query params:**
+
+| Parâmetro | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|:---:|:---:|---|
+| `page` | number | ❌ | `0` | Número da página (começa em 0) |
+| `size` | number | ❌ | `20` | Quantidade de itens por página |
+
+**Response `200 OK`:**
+
+```json
+{
+  "content": [
+    {
+      "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+      "nome": "João da Silva",
+      "turmaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "turmaNome": "Turma A"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "offset": 0,
+    "paged": true,
+    "unpaged": false,
+    "sort": {
+      "sorted": false,
+      "unsorted": true,
+      "empty": true
+    }
+  },
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0,
+  "sort": {
+    "sorted": false,
+    "unsorted": true,
+    "empty": true
+  },
+  "first": true,
+  "last": true,
+  "numberOfElements": 1,
+  "empty": false
+}
+```
+ 
+---
+
+#### Buscar aluno por ID
+
+```
+GET /aluno/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do aluno |
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "nome": "João da Silva",
+  "turmaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "turmaNome": "Turma A"
+}
+```
+ 
+---
+
+#### Atualizar aluno
+
+```
+PUT /aluno/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do aluno |
+
+**Request body:**
+
+```json
+{
+  "nome": "João da Silva Atualizado",
+  "turmaId": "9d7a9db1-a3ee-4c5e-9d99-9a01e4f2ee80"
+}
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "nome": "João da Silva Atualizado",
+  "turmaId": "9d7a9db1-a3ee-4c5e-9d99-9a01e4f2ee80",
+  "turmaNome": "Turma B"
+}
+```
+
+> Se `turmaId` não corresponder a uma turma existente, a API retorna `404 Not Found`.
+ 
+---
+
+#### Deletar aluno
+
+```
+DELETE /aluno/{id}
+```
+
+🔒 **Requer token.** Remove (soft delete) o aluno.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do aluno |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "Aluno deletado com sucesso"
+}
+```
+ 
+---
+
+## Formato de erro
+
+Todos os erros da API seguem um dos dois formatos abaixo.
+
+### Erros de negócio (`400` e `404`)
+
+Retornados quando uma regra de negócio falha (ex: email já cadastrado, recurso não encontrado). Corpo simples com uma mensagem:
+
+```json
+{
+  "message": "Este email já está em uso"
+}
+```
+
+| Status | Quando acontece |
+|---|---|
+| `404 Not Found` | Recurso não encontrado (ex: escola com ID inexistente) |
+| `400 Bad Request` | Regra de negócio violada (ex: email duplicado) |
+
+### Erros de validação (`400`)
+
+Retornados quando os campos do `@RequestBody` não passam nas anotações de validação (`@NotEmpty`, `@Email`, `@Size`, etc). O corpo traz um `errors` com uma entrada por campo inválido:
+
+```json
+{
+  "message": "Validation failed",
+  "errors": {
+    "email": "O formato do email é inválido",
+    "senha": "A senha deve ter no mínimo 6 caracteres"
+  }
+}
+```
+ 
 ---
  
 ## Enums do sistema

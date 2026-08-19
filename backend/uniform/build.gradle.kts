@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("com.auth0:java-jwt:4.5.2")
 	implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))
+	developmentOnly(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))
 	developmentOnly("me.paulschwarz:springboot4-dotenv")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
