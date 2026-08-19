@@ -1,6 +1,5 @@
 package com.six_m.uniform.domain.aluno;
 
-import com.six_m.uniform.domain.escola.Escola;
 import com.six_m.uniform.domain.turma.Turma;
 import jakarta.persistence.*;
 import lombok.*;
