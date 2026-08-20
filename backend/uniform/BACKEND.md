@@ -749,7 +749,467 @@ Authorization: Bearer <token>
   "message": "Aluno deletado com sucesso"
 }
 ```
- 
+
+---
+
+### Tipo de Uniforme
+
+#### Criar tipo de uniforme
+
+```
+POST /tipo-uniforme
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Request body:**
+
+```json
+{
+  "tipo": "Camiseta"
+}
+```
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipo": "Camiseta"
+}
+```
+
+---
+
+#### Listar tipos de uniforme (paginado)
+
+```
+GET /tipo-uniforme?page=0&size=10
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Query params:**
+
+| Parâmetro | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|:---:|:---:|---|
+| `page` | number | ❌ | `0` | Número da página (começa em 0) |
+| `size` | number | ❌ | `20` | Quantidade de itens por página |
+
+**Response `200 OK`:**
+
+```json
+{
+  "content": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "tipo": "Camiseta"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "offset": 0,
+    "paged": true,
+    "unpaged": false,
+    "sort": {
+      "sorted": false,
+      "unsorted": true,
+      "empty": true
+    }
+  },
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0,
+  "sort": {
+    "sorted": false,
+    "unsorted": true,
+    "empty": true
+  },
+  "first": true,
+  "last": true,
+  "numberOfElements": 1,
+  "empty": false
+}
+```
+
+---
+
+#### Buscar tipo de uniforme por ID
+
+```
+GET /tipo-uniforme/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do tipo de uniforme |
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipo": "Camiseta"
+}
+```
+
+---
+
+#### Atualizar tipo de uniforme
+
+```
+PUT /tipo-uniforme/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do tipo de uniforme |
+
+**Request body:**
+
+```json
+{
+  "tipo": "Camiseta Polo"
+}
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipo": "Camiseta Polo"
+}
+```
+
+---
+
+#### Deletar tipo de uniforme
+
+```
+DELETE /tipo-uniforme/{id}
+```
+
+🔒 **Requer token.** Só é possível deletar um tipo de uniforme se não houver nenhum uniforme ou item de lote vinculado a ele.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do tipo de uniforme |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "Tipo de uniforme deletado com sucesso"
+}
+```
+
+---
+
+### Uniforme
+
+#### Criar uniforme
+
+```
+POST /uniforme
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Request body:**
+
+```json
+{
+  "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tamanho": "M",
+  "quantidade": 10,
+  "sexo": "MASCULINO"
+}
+```
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipoUniformeNome": "Camiseta",
+  "tamanho": "M",
+  "quantidade": 10,
+  "sexo": "MASCULINO",
+  "devolvido": false
+}
+```
+
+---
+
+#### Listar uniformes (paginado)
+
+```
+GET /uniforme?page=0&size=10
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Query params:**
+
+| Parâmetro | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|:---:|:---:|---|
+| `page` | number | ❌ | `0` | Número da página (começa em 0) |
+| `size` | number | ❌ | `20` | Quantidade de itens por página |
+
+**Response `200 OK`:**
+
+```json
+{
+  "content": [
+    {
+      "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+      "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "tipoUniformeNome": "Camiseta",
+      "tamanho": "M",
+      "quantidade": 10,
+      "sexo": "MASCULINO",
+      "devolvido": false
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "offset": 0,
+    "paged": true,
+    "unpaged": false,
+    "sort": {
+      "sorted": false,
+      "unsorted": true,
+      "empty": true
+    }
+  },
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0,
+  "sort": {
+    "sorted": false,
+    "unsorted": true,
+    "empty": true
+  },
+  "first": true,
+  "last": true,
+  "numberOfElements": 1,
+  "empty": false
+}
+```
+
+---
+
+#### Buscar uniforme por ID
+
+```
+GET /uniforme/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do uniforme |
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipoUniformeNome": "Camiseta",
+  "tamanho": "M",
+  "quantidade": 10,
+  "sexo": "MASCULINO",
+  "devolvido": false
+}
+```
+
+---
+
+#### Atualizar uniforme
+
+```
+PUT /uniforme/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do uniforme |
+
+**Request body:**
+
+```json
+{
+  "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tamanho": "GG",
+  "quantidade": 20,
+  "sexo": "FEMININO"
+}
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipoUniformeNome": "Camiseta",
+  "tamanho": "GG",
+  "quantidade": 20,
+  "sexo": "FEMININO",
+  "devolvido": false
+}
+```
+
+---
+
+#### Marcar uniforme como devolvido
+
+```
+PATCH /uniforme/{id}/devolver
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do uniforme |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "tipoUniformeId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tipoUniformeNome": "Camiseta",
+  "tamanho": "M",
+  "quantidade": 10,
+  "sexo": "MASCULINO",
+  "devolvido": true
+}
+```
+
+---
+
+#### Deletar uniforme
+
+```
+DELETE /uniforme/{id}
+```
+
+🔒 **Requer token.** Remove (soft delete) o uniforme.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do uniforme |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "Uniforme deletado com sucesso"
+}
+```
+
 ---
 
 ## Formato de erro
