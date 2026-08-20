@@ -7,4 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface UniformeRepository extends JpaRepository<Uniforme, UUID> {
+    boolean existsByTipoUniformeId(UUID tipoUniformeId);
 }
