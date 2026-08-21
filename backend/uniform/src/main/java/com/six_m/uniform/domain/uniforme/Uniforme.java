@@ -5,8 +5,10 @@ import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -30,11 +32,13 @@ public class Uniforme {
     private TipoUniforme tipoUniforme;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Tamanho tamanho;
 
     private Integer quantidade;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Sexo sexo;
 
     @Builder.Default
