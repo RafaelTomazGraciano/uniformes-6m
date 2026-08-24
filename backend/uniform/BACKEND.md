@@ -1212,6 +1212,426 @@ Authorization: Bearer <token>
 
 ---
 
+### Nota Fiscal
+
+#### Criar nota fiscal
+
+```
+POST /nota-fiscal
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Request body:**
+
+```json
+{
+  "chaveAcesso": "12345678901234567890123456789012345678901234"
+}
+```
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "chaveAcesso": "12345678901234567890123456789012345678901234"
+}
+```
+
+---
+
+#### Listar notas fiscais (paginado)
+
+```
+GET /nota-fiscal?page=0&size=10
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Query params:**
+
+| Parâmetro | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|:---:|:---:|---|
+| `page` | number | ❌ | `0` | Número da página (começa em 0) |
+| `size` | number | ❌ | `20` | Quantidade de itens por página |
+
+**Response `200 OK`:**
+
+```json
+{
+  "content": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "chaveAcesso": "12345678901234567890123456789012345678901234"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "offset": 0,
+    "paged": true,
+    "unpaged": false,
+    "sort": {
+      "sorted": false,
+      "unsorted": true,
+      "empty": true
+    }
+  },
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0,
+  "sort": {
+    "sorted": false,
+    "unsorted": true,
+    "empty": true
+  },
+  "first": true,
+  "last": true,
+  "numberOfElements": 1,
+  "empty": false
+}
+```
+
+---
+
+#### Buscar nota fiscal por ID
+
+```
+GET /nota-fiscal/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador da nota fiscal |
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "chaveAcesso": "12345678901234567890123456789012345678901234"
+}
+```
+
+---
+
+#### Atualizar nota fiscal
+
+```
+PUT /nota-fiscal/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador da nota fiscal |
+
+**Request body:**
+
+```json
+{
+  "chaveAcesso": "98765432109876543210987654321098765432109876"
+}
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "chaveAcesso": "98765432109876543210987654321098765432109876"
+}
+```
+
+---
+
+#### Deletar nota fiscal
+
+```
+DELETE /nota-fiscal/{id}
+```
+
+🔒 **Requer token.** Só é possível deletar uma nota fiscal se não houver nenhum lote vinculado a ela.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador da nota fiscal |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "Nota fiscal deletada com sucesso"
+}
+```
+
+---
+
+### Lote
+
+#### Criar lote
+
+```
+POST /lote
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Request body:**
+
+```json
+{
+  "notaFiscalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fornecedor": "Fornecedor A",
+  "dataEntrega": "2025-06-17T14:30:00"
+}
+```
+
+| Campo | Obrigatório |
+|---|:---:|
+| `notaFiscalId` | ✅ |
+| `fornecedor` | ✅ |
+| `dataEntrega` | ❌ (lote pode ainda não ter data de entrega definida) |
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "notaFiscalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "notaFiscalChaveAcesso": "12345678901234567890123456789012345678901234",
+  "fornecedor": "Fornecedor A",
+  "dataEntrega": "2025-06-17T14:30:00"
+}
+```
+
+---
+
+#### Listar lotes (paginado)
+
+```
+GET /lote?page=0&size=10
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Query params:**
+
+| Parâmetro | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|:---:|:---:|---|
+| `page` | number | ❌ | `0` | Número da página (começa em 0) |
+| `size` | number | ❌ | `20` | Quantidade de itens por página |
+
+**Response `200 OK`:**
+
+```json
+{
+  "content": [
+    {
+      "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+      "notaFiscalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "notaFiscalChaveAcesso": "12345678901234567890123456789012345678901234",
+      "fornecedor": "Fornecedor A",
+      "dataEntrega": "2025-06-17T14:30:00"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 20,
+    "offset": 0,
+    "paged": true,
+    "unpaged": false,
+    "sort": {
+      "sorted": false,
+      "unsorted": true,
+      "empty": true
+    }
+  },
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0,
+  "sort": {
+    "sorted": false,
+    "unsorted": true,
+    "empty": true
+  },
+  "first": true,
+  "last": true,
+  "numberOfElements": 1,
+  "empty": false
+}
+```
+
+---
+
+#### Buscar lote por ID
+
+```
+GET /lote/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do lote |
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "notaFiscalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "notaFiscalChaveAcesso": "12345678901234567890123456789012345678901234",
+  "fornecedor": "Fornecedor A",
+  "dataEntrega": "2025-06-17T14:30:00"
+}
+```
+
+---
+
+#### Atualizar lote
+
+```
+PUT /lote/{id}
+```
+
+🔒 **Requer token.**
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do lote |
+
+**Request body:**
+
+```json
+{
+  "notaFiscalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fornecedor": "Fornecedor Atualizado",
+  "dataEntrega": "2025-07-01T10:00:00"
+}
+```
+
+**Response `200 OK`:**
+
+```json
+{
+  "id": "9c858901-8a57-4791-81fe-4c455b099bc9",
+  "notaFiscalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "notaFiscalChaveAcesso": "12345678901234567890123456789012345678901234",
+  "fornecedor": "Fornecedor Atualizado",
+  "dataEntrega": "2025-07-01T10:00:00"
+}
+```
+
+> Se `notaFiscalId` não corresponder a uma nota fiscal existente, a API retorna `404 Not Found`.
+
+---
+
+#### Deletar lote
+
+```
+DELETE /lote/{id}
+```
+
+🔒 **Requer token.** Só é possível deletar um lote se não houver nenhum item de lote vinculado a ele.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Path params:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `id` | UUID | Identificador do lote |
+
+**Request body:** nenhum
+
+**Response `200 OK`:**
+
+```json
+{
+  "message": "Lote deletado com sucesso"
+}
+```
+
+---
+
 ## Formato de erro
 
 Todos os erros da API seguem um dos dois formatos abaixo.
