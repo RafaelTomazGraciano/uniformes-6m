@@ -8,4 +8,6 @@ import java.util.UUID;
 @Repository
 public interface ItemLoteRepository extends JpaRepository<ItemLote, UUID> {
     boolean existsByTipoUniformeId(UUID tipoUniformeId);
+
+    boolean existsByLoteId(UUID loteId);
 }
