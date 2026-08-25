@@ -67,6 +67,12 @@ http://localhost:8080/api
 
 ---
 
+## Banco de dados
+
+![DER](./DER.png)
+
+---
+
 ## Documentação da API (Swagger)
 
 Toda a documentação de endpoints — request/response de cada rota, parâmetros, códigos de status — está no Swagger, gerado automaticamente a partir do código:
