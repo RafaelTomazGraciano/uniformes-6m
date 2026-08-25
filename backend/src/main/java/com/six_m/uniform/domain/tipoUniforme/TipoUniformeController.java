@@ -43,7 +43,7 @@ public class TipoUniformeController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar tipos de uniforme", description = "Retorna uma lista paginada de tipos de uniforme")
+    @Operation(summary = "Listar tipos de uniforme", description = "Retorna uma lista paginada de tipos de uniforme. Ordenação disponível por: tipo (ex: sort=tipo,asc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")

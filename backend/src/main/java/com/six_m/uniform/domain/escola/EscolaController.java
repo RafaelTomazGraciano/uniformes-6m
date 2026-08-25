@@ -26,7 +26,7 @@ public class EscolaController {
     private final EscolaService escolaService;
 
     @GetMapping
-    @Operation(summary = "Listar escolas", description = "Retorna uma lista paginada de escolas")
+    @Operation(summary = "Listar escolas", description = "Retorna uma lista paginada de escolas. Ordenação disponível por: nome, tipo, endereco (ex: sort=nome,asc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")

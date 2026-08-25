@@ -44,7 +44,7 @@ public class UniformeController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar uniformes", description = "Retorna uma lista paginada de uniformes. Ordenação disponível por: tamanho, quantidade, sexo, devolvido (ex: sort=quantidade,desc)")
+    @Operation(summary = "Listar uniformes", description = "Retorna uma lista paginada de uniformes. Ordenação disponível por: tamanho, quantidade, sexo (ex: sort=quantidade,desc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")

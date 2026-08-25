@@ -44,7 +44,7 @@ public class LoteController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar lotes", description = "Retorna uma lista paginada de lotes")
+    @Operation(summary = "Listar lotes", description = "Retorna uma lista paginada de lotes. Ordenação disponível por: fornecedor, dataEntrega (ex: sort=dataEntrega,desc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")

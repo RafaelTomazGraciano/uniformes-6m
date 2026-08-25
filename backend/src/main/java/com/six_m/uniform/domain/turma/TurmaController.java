@@ -43,7 +43,7 @@ public class TurmaController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar turmas", description = "Retorna uma lista paginada de turmas")
+    @Operation(summary = "Listar turmas", description = "Retorna uma lista paginada de turmas. Ordenação disponível por: nome, turno, ensino (ex: sort=nome,asc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
