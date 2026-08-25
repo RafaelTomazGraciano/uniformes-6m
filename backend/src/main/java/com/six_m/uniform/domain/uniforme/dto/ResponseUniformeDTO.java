@@ -11,7 +11,6 @@ public record ResponseUniformeDTO(
         String tipoUniformeNome,
         Tamanho tamanho,
         Integer quantidade,
-        Sexo sexo,
-        Boolean devolvido
+        Sexo sexo
 ) {
 }

@@ -79,18 +79,6 @@ public class UniformeController {
         return ResponseEntity.ok(uniformeService.atualizarUniforme(id, request));
     }
 
-    @PatchMapping("{id}/devolver")
-    @Operation(summary = "Marcar uniforme como devolvido", description = "Endpoint dedicado para alterar o status de devolução do uniforme")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Uniforme marcado como devolvido"),
-            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
-            @ApiResponse(responseCode = "404", description = "Uniforme não encontrado")
-    })
-    public ResponseEntity<ResponseUniformeDTO> devolverUniforme(
-            @Parameter(description = "Identificador do uniforme") @PathVariable UUID id) {
-        return ResponseEntity.ok(uniformeService.devolverUniforme(id));
-    }
-
     @DeleteMapping("{id}")
     @Operation(summary = "Deletar uniforme", description = "Remove (soft delete) um uniforme")
     @ApiResponses({

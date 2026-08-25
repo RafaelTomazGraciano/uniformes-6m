@@ -42,13 +42,5 @@ public class Uniforme {
     private Sexo sexo;
 
     @Builder.Default
-    private Boolean devolvido = false;
-
-    @Builder.Default
     private Boolean deletado = false;
-
-
-    public void devolver() {
-        this.devolvido = true;
-    }
 }

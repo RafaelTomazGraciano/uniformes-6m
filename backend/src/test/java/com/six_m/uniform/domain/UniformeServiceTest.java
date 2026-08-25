@@ -64,7 +64,6 @@ public class UniformeServiceTest {
         assertEquals(Tamanho.M, response.tamanho());
         assertEquals(10, response.quantidade());
         assertEquals(Sexo.MASCULINO, response.sexo());
-        assertFalse(response.devolvido());
     }
 
     @Test
@@ -203,29 +202,6 @@ public class UniformeServiceTest {
                 () -> uniformeService.atualizarUniforme(id, dto));
 
         assertTrue(exception.getMessage().contains(tipoId.toString()));
-        verify(uniformeRepository, never()).save(any());
-    }
-
-    @Test
-    void deveMarcarUniformeComoDevolvido() {
-        UUID id = UUID.randomUUID();
-        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
-        Uniforme uniforme = Uniforme.builder().id(id).tipoUniforme(tipo).tamanho(Tamanho.M).quantidade(10).sexo(Sexo.MASCULINO).devolvido(false).build();
-
-        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniforme));
-        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ResponseUniformeDTO response = uniformeService.devolverUniforme(id);
-
-        assertTrue(response.devolvido());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoUniformeNaoExisteAoDevolver() {
-        UUID id = UUID.randomUUID();
-        when(uniformeRepository.findById(id)).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> uniformeService.devolverUniforme(id));
         verify(uniformeRepository, never()).save(any());
     }
 
