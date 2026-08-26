@@ -33,9 +33,7 @@ public class SecurityFilter extends OncePerRequestFilter {
                 Optional<String> subject = jwtTokenService.validateToken(token);
                 subject.ifPresent(this::autenticar);
             } catch (JWTVerificationException exception) {
-                // Token inválido ou expirado: segue sem autenticar.
-                // O Spring Security barra a requisição mais adiante como 401/403,
-                // sem que essa exceção precise vazar como erro 500.
+                // Token inválido ou expirado: segue sem autenticar
             }
         }
 
@@ -47,7 +45,7 @@ public class SecurityFilter extends OncePerRequestFilter {
             UserDetailsImpl userDetails = new UserDetailsImpl(usuario);
 
             Authentication authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails.getUsername(), null, userDetails.getAuthorities());
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
         });
