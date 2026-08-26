@@ -7,4 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface PedidoUniformeRepository extends JpaRepository<PedidoUniforme, UUID> {
+    boolean existsByPedidoId(UUID id);
 }
