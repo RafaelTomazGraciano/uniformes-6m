@@ -43,7 +43,7 @@ public class NotaFiscalController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar notas fiscais", description = "Retorna uma lista paginada de notas fiscais")
+    @Operation(summary = "Listar notas fiscais", description = "Retorna uma lista paginada de notas fiscais. Ordenação disponível por: chaveAcesso (ex: sort=chaveAcesso,asc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")

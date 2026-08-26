@@ -44,7 +44,7 @@ public class AlunoController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar alunos", description = "Retorna uma lista paginada de alunos")
+    @Operation(summary = "Listar alunos", description = "Retorna uma lista paginada de alunos. Ordenação disponível por: nome (ex: sort=nome,asc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")

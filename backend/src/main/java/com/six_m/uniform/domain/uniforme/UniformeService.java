@@ -65,17 +65,6 @@ public class UniformeService {
     }
 
     @Transactional
-    public ResponseUniformeDTO devolverUniforme(UUID id) {
-        Uniforme uniforme = buscarUniformeOuFalhar(id);
-
-        uniforme.devolver();
-
-        uniforme = uniformeRepository.save(uniforme);
-
-        return toResponseDTO(uniforme);
-    }
-
-    @Transactional
     public MessageResponseDTO deletarUniforme(UUID id) {
         Uniforme uniforme = buscarUniformeOuFalhar(id);
         uniformeRepository.delete(uniforme);
@@ -99,8 +88,7 @@ public class UniformeService {
                 uniforme.getTipoUniforme().getTipo(),
                 uniforme.getTamanho(),
                 uniforme.getQuantidade(),
-                uniforme.getSexo(),
-                uniforme.getDevolvido()
+                uniforme.getSexo()
         );
     }
 }
