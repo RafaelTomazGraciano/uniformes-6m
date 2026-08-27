@@ -7,9 +7,7 @@ import com.six_m.uniform.domain.pedido.dto.RequestCriarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.ResponsePedidoDTO;
 import com.six_m.uniform.domain.pedidoUniforme.PedidoUniformeRepository;
 import com.six_m.uniform.domain.usuario.Usuario;
-import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +21,6 @@ import java.util.UUID;
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
-    private final PedidoUniformeRepository pedidoUniformeRepository;
     private final AlunoRepository alunoRepository;
 
     @Transactional
@@ -63,18 +60,6 @@ public class PedidoService {
         pedido = pedidoRepository.save(pedido);
 
         return toResponseDTO(pedido);
-    }
-
-    @Transactional
-    public MessageResponseDTO deletarPedido(UUID id) {
-        Pedido pedido = buscarPedidoOuFalhar(id);
-
-        if (pedidoUniformeRepository.existsByPedidoId(id)) {
-            throw new BadRequestException("Não é possível excluir o pedido: existem itens de uniforme vinculados a ele");
-        }
-
-        pedidoRepository.delete(pedido);
-        return new MessageResponseDTO("Pedido deletado com sucesso");
     }
 
     private Pedido buscarPedidoOuFalhar(UUID id) {

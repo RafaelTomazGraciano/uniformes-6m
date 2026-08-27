@@ -1,14 +1,11 @@
 package com.six_m.uniform.domain.lote;
 
-import com.six_m.uniform.domain.itemLote.ItemLoteRepository;
 import com.six_m.uniform.domain.lote.dto.RequestAtualizarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.RequestCriarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.ResponseLoteDTO;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalRepository;
-import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +20,6 @@ public class LoteService {
 
     private final LoteRepository loteRepository;
     private final NotaFiscalRepository notaFiscalRepository;
-    private final ItemLoteRepository itemLoteRepository;
 
     @Transactional
     public ResponseLoteDTO criarLote(RequestCriarLoteDTO dto) {
@@ -63,19 +59,6 @@ public class LoteService {
         lote = loteRepository.save(lote);
 
         return toResponseDTO(lote);
-    }
-
-    @Transactional
-    public MessageResponseDTO deletarLote(UUID id) {
-        Lote lote = buscarLoteOuFalhar(id);
-
-        if (itemLoteRepository.existsByLoteId(id)) {
-            throw new BadRequestException("Não é possível excluir o lote: existem itens vinculados a ele");
-        }
-
-        loteRepository.delete(lote);
-
-        return new MessageResponseDTO("Lote deletado com sucesso");
     }
 
     private Lote buscarLoteOuFalhar(UUID id) {

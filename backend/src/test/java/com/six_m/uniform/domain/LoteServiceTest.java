@@ -1,6 +1,5 @@
 package com.six_m.uniform.domain;
 
-import com.six_m.uniform.domain.itemLote.ItemLoteRepository;
 import com.six_m.uniform.domain.lote.Lote;
 import com.six_m.uniform.domain.lote.LoteRepository;
 import com.six_m.uniform.domain.lote.LoteService;
@@ -9,9 +8,7 @@ import com.six_m.uniform.domain.lote.dto.RequestCriarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.ResponseLoteDTO;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalRepository;
-import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,9 +35,6 @@ public class LoteServiceTest {
 
     @Mock
     private NotaFiscalRepository notaFiscalRepository;
-
-    @Mock
-    private ItemLoteRepository itemLoteRepository;
 
     @InjectMocks
     private LoteService loteService;
@@ -219,45 +213,5 @@ public class LoteServiceTest {
 
         assertTrue(exception.getMessage().contains(notaFiscalId.toString()));
         verify(loteRepository, never()).save(any());
-    }
-
-    @Test
-    void deveDeletarLoteComSucessoQuandoNaoHaItensVinculados() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
-        Lote lote = Lote.builder().id(id).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
-
-        when(loteRepository.findById(id)).thenReturn(Optional.of(lote));
-        when(itemLoteRepository.existsByLoteId(id)).thenReturn(false);
-
-        MessageResponseDTO resultado = loteService.deletarLote(id);
-
-        assertEquals("Lote deletado com sucesso", resultado.message());
-        verify(loteRepository).delete(lote);
-    }
-
-    @Test
-    void deveLancarExcecaoAoDeletarLoteComItensVinculados() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
-        Lote lote = Lote.builder().id(id).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
-
-        when(loteRepository.findById(id)).thenReturn(Optional.of(lote));
-        when(itemLoteRepository.existsByLoteId(id)).thenReturn(true);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> loteService.deletarLote(id));
-
-        assertEquals("Não é possível excluir o lote: existem itens vinculados a ele", exception.getMessage());
-        verify(loteRepository, never()).delete(any());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoLoteNaoExisteAoDeletar() {
-        UUID id = UUID.randomUUID();
-        when(loteRepository.findById(id)).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> loteService.deletarLote(id));
-        verify(itemLoteRepository, never()).existsByLoteId(any());
     }
 }

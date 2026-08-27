@@ -4,7 +4,6 @@ import com.six_m.uniform.domain.pedido.dto.RequestAtualizarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.RequestCriarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.ResponsePedidoDTO;
 import com.six_m.uniform.domain.usuario.Usuario;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -82,17 +81,5 @@ public class PedidoController {
             @Parameter(description = "Identificador do pedido") @PathVariable UUID id,
             @Valid @RequestBody RequestAtualizarPedidoDTO request) {
         return ResponseEntity.ok(pedidoService.atualizarPedido(id, request));
-    }
-
-    @DeleteMapping("{id}")
-    @Operation(summary = "Deletar pedido")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Pedido deletado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
-            @ApiResponse(responseCode = "404", description = "Pedido não encontrado")
-    })
-    public ResponseEntity<MessageResponseDTO> deletarPedido(
-            @Parameter(description = "Identificador do pedido") @PathVariable UUID id) {
-        return ResponseEntity.ok(pedidoService.deletarPedido(id));
     }
 }

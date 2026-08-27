@@ -228,48 +228,4 @@ public class PedidoServiceTest {
         assertTrue(exception.getMessage().contains(alunoId.toString()));
         verify(pedidoRepository, never()).save(any());
     }
-
-    @Test
-    void deveDeletarPedidoComSucessoQuandoNaoHaItensVinculados() {
-        UUID id = UUID.randomUUID();
-        Aluno aluno = Aluno.builder().id(UUID.randomUUID()).nome("João").build();
-        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").email("rafael@teste.com").build();
-        Pedido pedido = Pedido.builder().id(id).aluno(aluno).usuario(usuario).build();
-
-        when(pedidoRepository.findById(id)).thenReturn(Optional.of(pedido));
-        when(pedidoUniformeRepository.existsByPedidoId(id)).thenReturn(false);
-
-        MessageResponseDTO resultado = pedidoService.deletarPedido(id);
-
-        assertEquals("Pedido deletado com sucesso", resultado.message());
-        verify(pedidoRepository).delete(pedido);
-    }
-
-    @Test
-    void deveLancarExcecaoAoDeletarPedidoComItensDeUniformeVinculados() {
-        UUID id = UUID.randomUUID();
-        Aluno aluno = Aluno.builder().id(UUID.randomUUID()).nome("João").build();
-        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").email("rafael@teste.com").build();
-        Pedido pedido = Pedido.builder().id(id).aluno(aluno).usuario(usuario).build();
-
-        when(pedidoRepository.findById(id)).thenReturn(Optional.of(pedido));
-        when(pedidoUniformeRepository.existsByPedidoId(id)).thenReturn(true);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> pedidoService.deletarPedido(id));
-
-        assertEquals("Não é possível excluir o pedido: existem itens de uniforme vinculados a ele", exception.getMessage());
-        verify(pedidoRepository, never()).delete(any());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoPedidoNaoExisteAoDeletar() {
-        UUID id = UUID.randomUUID();
-
-        when(pedidoRepository.findById(id)).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> pedidoService.deletarPedido(id));
-        verify(pedidoUniformeRepository, never()).existsByPedidoId(any());
-        verify(pedidoRepository, never()).delete(any());
-    }
 }

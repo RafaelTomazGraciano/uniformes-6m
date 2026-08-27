@@ -4,8 +4,6 @@ import com.six_m.uniform.domain.lote.LoteRepository;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalRepository;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalService;
-import com.six_m.uniform.domain.notaFiscal.dto.RequestAtualizarNotaFiscalDTO;
-import com.six_m.uniform.domain.notaFiscal.dto.RequestCriarNotaFiscalDTO;
 import com.six_m.uniform.domain.notaFiscal.dto.ResponseNotaFiscalDTO;
 import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
@@ -32,43 +30,8 @@ public class NotaFiscalServiceTest {
     @Mock
     private NotaFiscalRepository notaFiscalRepository;
 
-    @Mock
-    private LoteRepository loteRepository;
-
     @InjectMocks
     private NotaFiscalService notaFiscalService;
-
-    @Test
-    void deveCriarNotaFiscalComSucesso() {
-        RequestCriarNotaFiscalDTO dto = new RequestCriarNotaFiscalDTO("12345678901234567890123456789012345678901234");
-
-        when(notaFiscalRepository.existsByChaveAcesso(dto.chaveAcesso())).thenReturn(false);
-
-        UUID idGerado = UUID.randomUUID();
-        when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(invocation -> {
-            NotaFiscal salvo = invocation.getArgument(0);
-            salvo.setId(idGerado);
-            return salvo;
-        });
-
-        ResponseNotaFiscalDTO response = notaFiscalService.criarNotaFiscal(dto);
-
-        assertEquals(idGerado, response.id());
-        assertEquals(dto.chaveAcesso(), response.chaveAcesso());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoChaveAcessoJaExisteAoCriar() {
-        RequestCriarNotaFiscalDTO dto = new RequestCriarNotaFiscalDTO("chave-existente");
-
-        when(notaFiscalRepository.existsByChaveAcesso(dto.chaveAcesso())).thenReturn(true);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> notaFiscalService.criarNotaFiscal(dto));
-
-        assertEquals("Já existe uma nota fiscal com esta chave de acesso", exception.getMessage());
-        verify(notaFiscalRepository, never()).save(any());
-    }
 
     @Test
     void deveBuscarTodasNotasFiscaisPaginado() {
@@ -119,100 +82,5 @@ public class NotaFiscalServiceTest {
                 () -> notaFiscalService.buscarNotaFiscal(id));
 
         assertTrue(exception.getMessage().contains(id.toString()));
-    }
-
-    @Test
-    void deveAtualizarNotaFiscalComSucesso() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscalExistente = NotaFiscal.builder().id(id).chaveAcesso("chave-antiga").build();
-        RequestAtualizarNotaFiscalDTO dto = new RequestAtualizarNotaFiscalDTO("chave-nova");
-
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.of(notaFiscalExistente));
-        when(notaFiscalRepository.existsByChaveAcesso("chave-nova")).thenReturn(false);
-        when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ResponseNotaFiscalDTO response = notaFiscalService.atualizarNotaFiscal(id, dto);
-
-        assertEquals("chave-nova", response.chaveAcesso());
-    }
-
-    @Test
-    void devePermitirAtualizarNotaFiscalMantendoAMesmaChave() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscalExistente = NotaFiscal.builder().id(id).chaveAcesso("chave-1").build();
-        RequestAtualizarNotaFiscalDTO dto = new RequestAtualizarNotaFiscalDTO("chave-1");
-
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.of(notaFiscalExistente));
-        when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ResponseNotaFiscalDTO response = notaFiscalService.atualizarNotaFiscal(id, dto);
-
-        assertEquals("chave-1", response.chaveAcesso());
-        verify(notaFiscalRepository, never()).existsByChaveAcesso(any());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoNovaChaveJaExisteAoAtualizar() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscalExistente = NotaFiscal.builder().id(id).chaveAcesso("chave-antiga").build();
-        RequestAtualizarNotaFiscalDTO dto = new RequestAtualizarNotaFiscalDTO("chave-de-outra-nota");
-
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.of(notaFiscalExistente));
-        when(notaFiscalRepository.existsByChaveAcesso("chave-de-outra-nota")).thenReturn(true);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> notaFiscalService.atualizarNotaFiscal(id, dto));
-
-        assertEquals("Já existe uma nota fiscal com esta chave de acesso", exception.getMessage());
-        verify(notaFiscalRepository, never()).save(any());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoNotaFiscalNaoExisteAoAtualizar() {
-        UUID id = UUID.randomUUID();
-        RequestAtualizarNotaFiscalDTO dto = new RequestAtualizarNotaFiscalDTO("chave-1");
-
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> notaFiscalService.atualizarNotaFiscal(id, dto));
-        verify(notaFiscalRepository, never()).save(any());
-    }
-
-    @Test
-    void deveDeletarNotaFiscalComSucessoQuandoNaoHaLotesVinculados() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(id).chaveAcesso("chave-1").build();
-
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.of(notaFiscal));
-        when(loteRepository.existsByNotaFiscalId(id)).thenReturn(false);
-
-        MessageResponseDTO resultado = notaFiscalService.deletarNotaFiscal(id);
-
-        assertEquals("Nota fiscal deletada com sucesso", resultado.message());
-        verify(notaFiscalRepository).delete(notaFiscal);
-    }
-
-    @Test
-    void deveLancarExcecaoAoDeletarNotaFiscalComLotesVinculados() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(id).chaveAcesso("chave-1").build();
-
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.of(notaFiscal));
-        when(loteRepository.existsByNotaFiscalId(id)).thenReturn(true);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> notaFiscalService.deletarNotaFiscal(id));
-
-        assertEquals("Não é possível excluir a nota fiscal: existem lotes vinculados a ela", exception.getMessage());
-        verify(notaFiscalRepository, never()).delete(any());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoNotaFiscalNaoExisteAoDeletar() {
-        UUID id = UUID.randomUUID();
-        when(notaFiscalRepository.findById(id)).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () -> notaFiscalService.deletarNotaFiscal(id));
-        verify(loteRepository, never()).existsByNotaFiscalId(any());
     }
 }
