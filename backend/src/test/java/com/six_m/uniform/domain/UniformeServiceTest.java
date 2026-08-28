@@ -1,13 +1,12 @@
 package com.six_m.uniform.domain;
 
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
-import com.six_m.uniform.domain.tipoUniforme.TipoUniformeRepository;
+import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
 import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeRepository;
 import com.six_m.uniform.domain.uniforme.UniformeService;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
@@ -32,6 +31,9 @@ public class UniformeServiceTest {
 
     @Mock
     private UniformeRepository uniformeRepository;
+
+    @Mock
+    private TipoUniformeService tipoUniformeService;
 
     @InjectMocks
     private UniformeService uniformeService;
@@ -84,5 +86,65 @@ public class UniformeServiceTest {
         when(uniformeRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () -> uniformeService.buscarUniforme(id));
+    }
+
+    @Test
+    void deveDarEntradaSomandoQuantidadeQuandoUniformeJaExiste() {
+        UUID tipoId = UUID.randomUUID();
+        Uniforme existente = Uniforme.builder().id(UUID.randomUUID()).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(5).build();
+
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.of(existente));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Uniforme resultado = uniformeService.darEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10);
+
+        assertEquals(15, resultado.getQuantidade());
+        verify(tipoUniformeService, never()).buscarTipoUniformeEntidade(any());
+    }
+
+    @Test
+    void deveDarEntradaCriandoNovoUniformeQuandoNaoExiste() {
+        UUID tipoId = UUID.randomUUID();
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(tipoId).tipo("Camiseta").build();
+
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.empty());
+        when(tipoUniformeService.buscarTipoUniformeEntidade(tipoId)).thenReturn(tipoUniforme);
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Uniforme resultado = uniformeService.darEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10);
+
+        assertEquals(10, resultado.getQuantidade());
+        assertEquals(tipoUniforme, resultado.getTipoUniforme());
+    }
+
+    @Test
+    void deveEstornarEntradaSubtraindoQuantidade() {
+        UUID tipoId = UUID.randomUUID();
+        Uniforme existente = Uniforme.builder().id(UUID.randomUUID()).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(15).build();
+
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.of(existente));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        uniformeService.estornarEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10);
+
+        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
+        verify(uniformeRepository).save(captor.capture());
+        assertEquals(5, captor.getValue().getQuantidade());
+    }
+
+    @Test
+    void deveLancarExcecaoAoEstornarEntradaQuandoUniformeNaoExiste() {
+        UUID tipoId = UUID.randomUUID();
+
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class,
+                () -> uniformeService.estornarEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10));
+
+        verify(uniformeRepository, never()).save(any());
     }
 }

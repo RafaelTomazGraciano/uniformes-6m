@@ -19,7 +19,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/item-lote")
-@Tag(name = "Item de Lote", description = "Cadastro e gestão dos itens que compõem um lote de entrega")
+@Tag(name = "Item de Lote", description = "Consulta dos itens de lote — o cadastro é feito automaticamente ao criar/atualizar um lote")
 @SecurityRequirement(name = "bearerAuth")
 public class ItemLoteController {
 

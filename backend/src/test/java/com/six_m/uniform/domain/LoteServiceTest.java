@@ -1,17 +1,24 @@
 package com.six_m.uniform.domain;
 
+import com.six_m.uniform.domain.itemLote.ItemLote;
+import com.six_m.uniform.domain.itemLote.ItemLoteService;
 import com.six_m.uniform.domain.lote.Lote;
 import com.six_m.uniform.domain.lote.LoteRepository;
 import com.six_m.uniform.domain.lote.LoteService;
 import com.six_m.uniform.domain.lote.dto.RequestAtualizarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.RequestCriarLoteDTO;
+import com.six_m.uniform.domain.lote.dto.RequestItemEntradaDTO;
 import com.six_m.uniform.domain.lote.dto.ResponseLoteDTO;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
-import com.six_m.uniform.domain.notaFiscal.NotaFiscalRepository;
+import com.six_m.uniform.domain.notaFiscal.NotaFiscalService;
+import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
+import com.six_m.uniform.domain.uniforme.UniformeService;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
+import com.six_m.uniform.shared.enums.Sexo;
+import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,7 +26,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,97 +40,56 @@ public class LoteServiceTest {
     private LoteRepository loteRepository;
 
     @Mock
-    private NotaFiscalRepository notaFiscalRepository;
+    private NotaFiscalService notaFiscalService;
+
+    @Mock
+    private ItemLoteService itemLoteService;
+
+    @Mock
+    private UniformeService uniformeService;
 
     @InjectMocks
     private LoteService loteService;
 
+
     @Test
     void deveCriarLoteComSucesso() {
-        UUID notaFiscalId = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(notaFiscalId).chaveAcesso("chave-1").build();
-        LocalDateTime dataEntrega = LocalDateTime.of(2025, 6, 17, 14, 30);
-        RequestCriarLoteDTO dto = new RequestCriarLoteDTO(notaFiscalId, "Fornecedor A", dataEntrega);
+        RequestItemEntradaDTO itemDto = new RequestItemEntradaDTO(UUID.randomUUID(), Tamanho.M, Sexo.MASCULINO, 10);
+        RequestCriarLoteDTO dto = new RequestCriarLoteDTO("chave-1", "Fornecedor A", null, List.of(itemDto));
 
-        when(notaFiscalRepository.findById(notaFiscalId)).thenReturn(Optional.of(notaFiscal));
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
+        when(notaFiscalService.criarParaLote("chave-1")).thenReturn(notaFiscal);
 
-        UUID idGerado = UUID.randomUUID();
+        UUID loteId = UUID.randomUUID();
         when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> {
             Lote salvo = invocation.getArgument(0);
-            salvo.setId(idGerado);
+            salvo.setId(loteId);
             return salvo;
         });
 
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        ItemLote itemSalvo = ItemLote.builder().id(UUID.randomUUID()).tipoUniforme(tipoUniforme).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(10).build();
+        when(itemLoteService.criarItensParaLote(any(Lote.class), eq(dto.itens()))).thenReturn(List.of(itemSalvo));
+
         ResponseLoteDTO response = loteService.criarLote(dto);
 
-        assertEquals(idGerado, response.id());
-        assertEquals(notaFiscalId, response.notaFiscalId());
+        assertEquals(loteId, response.id());
         assertEquals("chave-1", response.notaFiscalChaveAcesso());
-        assertEquals("Fornecedor A", response.fornecedor());
-        assertEquals(dataEntrega, response.dataEntrega());
+        assertEquals(1, response.itens().size());
+        verify(uniformeService).darEntrada(tipoUniforme.getId(), Tamanho.M, Sexo.MASCULINO, 10);
     }
 
     @Test
-    void deveCriarLoteSemDataEntrega() {
-        UUID notaFiscalId = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(notaFiscalId).chaveAcesso("chave-1").build();
-        RequestCriarLoteDTO dto = new RequestCriarLoteDTO(notaFiscalId, "Fornecedor A", null);
-
-        when(notaFiscalRepository.findById(notaFiscalId)).thenReturn(Optional.of(notaFiscal));
-        when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        ResponseLoteDTO response = loteService.criarLote(dto);
-
-        assertNull(response.dataEntrega());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoNotaFiscalNaoExisteAoCriarLote() {
-        UUID notaFiscalId = UUID.randomUUID();
-        RequestCriarLoteDTO dto = new RequestCriarLoteDTO(notaFiscalId, "Fornecedor A", null);
-
-        when(notaFiscalRepository.findById(notaFiscalId)).thenReturn(Optional.empty());
-
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> loteService.criarLote(dto));
-
-        assertTrue(exception.getMessage().contains(notaFiscalId.toString()));
-        verify(loteRepository, never()).save(any());
-    }
-
-    @Test
-    void deveSalvarLoteComOsCamposCorretosAoCriar() {
-        UUID notaFiscalId = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(notaFiscalId).chaveAcesso("chave-1").build();
-        RequestCriarLoteDTO dto = new RequestCriarLoteDTO(notaFiscalId, "Fornecedor B", null);
-
-        when(notaFiscalRepository.findById(notaFiscalId)).thenReturn(Optional.of(notaFiscal));
-        when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        loteService.criarLote(dto);
-
-        ArgumentCaptor<Lote> captor = ArgumentCaptor.forClass(Lote.class);
-        verify(loteRepository).save(captor.capture());
-
-        assertEquals(notaFiscal, captor.getValue().getNotaFiscal());
-        assertEquals("Fornecedor B", captor.getValue().getFornecedor());
-    }
-
-    @Test
-    void deveBuscarTodosLotesPaginado() {
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
-        Lote lote1 = Lote.builder().id(UUID.randomUUID()).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
-        Lote lote2 = Lote.builder().id(UUID.randomUUID()).notaFiscal(notaFiscal).fornecedor("Fornecedor B").build();
+    void deveBuscarTodosLotesPaginadoComItens() {
+        Lote lote = Lote.builder().id(UUID.randomUUID()).notaFiscal(NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build()).fornecedor("Fornecedor A").build();
 
         Pageable pageable = PageRequest.of(0, 10);
-        when(loteRepository.findAll(pageable))
-                .thenReturn(new PageImpl<>(List.of(lote1, lote2), pageable, 2));
+        when(loteRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(lote), pageable, 1));
+        when(itemLoteService.buscarItensPorLote(lote.getId())).thenReturn(List.of());
 
         var resultado = loteService.buscarTodosLotes(pageable);
 
-        assertEquals(2, resultado.getTotalElements());
-        assertEquals("Fornecedor A", resultado.getContent().get(0).fornecedor());
-        assertEquals("Fornecedor B", resultado.getContent().get(1).fornecedor());
+        assertEquals(1, resultado.getTotalElements());
     }
 
     @Test
@@ -139,17 +104,17 @@ public class LoteServiceTest {
     }
 
     @Test
-    void deveBuscarLotePorId() {
-        UUID id = UUID.randomUUID();
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
-        Lote lote = Lote.builder().id(id).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
+    void deveBuscarLotePorIdComItens() {
+        UUID loteId = UUID.randomUUID();
+        Lote lote = Lote.builder().id(loteId).notaFiscal(NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build()).fornecedor("Fornecedor A").build();
 
-        when(loteRepository.findById(id)).thenReturn(Optional.of(lote));
+        when(loteRepository.findById(loteId)).thenReturn(Optional.of(lote));
+        when(itemLoteService.buscarItensPorLote(loteId)).thenReturn(List.of());
 
-        ResponseLoteDTO response = loteService.buscarLote(id);
+        ResponseLoteDTO response = loteService.buscarLote(loteId);
 
-        assertEquals(id, response.id());
-        assertEquals("Fornecedor A", response.fornecedor());
+        assertEquals(loteId, response.id());
+        assertTrue(response.itens().isEmpty());
     }
 
     @Test
@@ -161,57 +126,62 @@ public class LoteServiceTest {
     }
 
     @Test
-    void deveAtualizarLoteComSucesso() {
-        UUID id = UUID.randomUUID();
-        UUID novaNotaFiscalId = UUID.randomUUID();
+    void deveAtualizarLoteEstornandoItensAntigosEDandoEntradaNosNovos() {
+        UUID loteId = UUID.randomUUID();
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
+        Lote loteExistente = Lote.builder().id(loteId).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
 
-        NotaFiscal notaFiscalAntiga = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-antiga").build();
-        NotaFiscal notaFiscalNova = NotaFiscal.builder().id(novaNotaFiscalId).chaveAcesso("chave-nova").build();
-        Lote loteExistente = Lote.builder().id(id).notaFiscal(notaFiscalAntiga).fornecedor("Fornecedor A").build();
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        ItemLote itemAntigo = ItemLote.builder()
+                .id(UUID.randomUUID())
+                .tipoUniforme(tipoUniforme)
+                .tamanho(Tamanho.M)
+                .sexo(Sexo.MASCULINO)
+                .quantidade(5)
+                .build();
 
-        LocalDateTime dataEntrega = LocalDateTime.of(2025, 7, 1, 10, 0);
-        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO(novaNotaFiscalId, "Fornecedor Atualizado", dataEntrega);
+        RequestItemEntradaDTO itemNovoDto = new RequestItemEntradaDTO(tipoUniforme.getId(), Tamanho.G, Sexo.FEMININO, 8);
+        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO("chave-1", "Fornecedor Atualizado", null, List.of(itemNovoDto));
 
-        when(loteRepository.findById(id)).thenReturn(Optional.of(loteExistente));
-        when(notaFiscalRepository.findById(novaNotaFiscalId)).thenReturn(Optional.of(notaFiscalNova));
+        when(loteRepository.findById(loteId)).thenReturn(Optional.of(loteExistente));
+        when(notaFiscalService.atualizarParaLote(notaFiscal, "chave-1")).thenReturn(notaFiscal);
+        when(itemLoteService.buscarItensPorLote(loteId)).thenReturn(List.of(itemAntigo));
+
+        ItemLote itemNovo = ItemLote.builder().id(UUID.randomUUID()).tipoUniforme(tipoUniforme).tamanho(Tamanho.G).sexo(Sexo.FEMININO).quantidade(8).build();
+        when(itemLoteService.criarItensParaLote(loteExistente, dto.itens())).thenReturn(List.of(itemNovo));
         when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ResponseLoteDTO response = loteService.atualizarLote(id, dto);
+        ResponseLoteDTO response = loteService.atualizarLote(loteId, dto);
 
-        assertEquals(novaNotaFiscalId, response.notaFiscalId());
-        assertEquals("chave-nova", response.notaFiscalChaveAcesso());
+        verify(uniformeService).estornarEntrada(tipoUniforme.getId(), Tamanho.M, Sexo.MASCULINO, 5);
+        verify(itemLoteService).deletarItensPorLote(List.of(itemAntigo));
+        verify(uniformeService).darEntrada(tipoUniforme.getId(), Tamanho.G, Sexo.FEMININO, 8);
         assertEquals("Fornecedor Atualizado", response.fornecedor());
-        assertEquals(dataEntrega, response.dataEntrega());
     }
 
     @Test
     void deveLancarExcecaoQuandoLoteNaoExisteAoAtualizar() {
-        UUID id = UUID.randomUUID();
-        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO(UUID.randomUUID(), "Fornecedor A", null);
+        UUID loteId = UUID.randomUUID();
+        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO("chave-1", "Fornecedor A", null, List.of());
 
-        when(loteRepository.findById(id)).thenReturn(Optional.empty());
+        when(loteRepository.findById(loteId)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> loteService.atualizarLote(id, dto));
-        verify(notaFiscalRepository, never()).findById(any());
-        verify(loteRepository, never()).save(any());
+        assertThrows(NotFoundException.class, () -> loteService.atualizarLote(loteId, dto));
+        verify(notaFiscalService, never()).atualizarParaLote(any(), any());
+        verify(itemLoteService, never()).buscarItensPorLote(any());
     }
 
     @Test
-    void deveLancarExcecaoQuandoNovaNotaFiscalNaoExisteAoAtualizar() {
-        UUID id = UUID.randomUUID();
-        UUID notaFiscalId = UUID.randomUUID();
+    void devePropagarExcecaoDeItemDuplicadoAoCriarLote() {
+        RequestItemEntradaDTO item1 = new RequestItemEntradaDTO(UUID.randomUUID(), Tamanho.M, Sexo.MASCULINO, 5);
+        RequestCriarLoteDTO dto = new RequestCriarLoteDTO("chave-1", "Fornecedor A", null, List.of(item1, item1));
 
-        NotaFiscal notaFiscalAntiga = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-antiga").build();
-        Lote loteExistente = Lote.builder().id(id).notaFiscal(notaFiscalAntiga).fornecedor("Fornecedor A").build();
-        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO(notaFiscalId, "Fornecedor A", null);
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
+        when(notaFiscalService.criarParaLote("chave-1")).thenReturn(notaFiscal);
+        when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemLoteService.criarItensParaLote(any(Lote.class), eq(dto.itens())))
+                .thenThrow(new BadRequestException("Item duplicado no lote: mesmo tipo de uniforme, tamanho e sexo informados mais de uma vez"));
 
-        when(loteRepository.findById(id)).thenReturn(Optional.of(loteExistente));
-        when(notaFiscalRepository.findById(notaFiscalId)).thenReturn(Optional.empty());
-
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> loteService.atualizarLote(id, dto));
-
-        assertTrue(exception.getMessage().contains(notaFiscalId.toString()));
-        verify(loteRepository, never()).save(any());
+        assertThrows(BadRequestException.class, () -> loteService.criarLote(dto));
     }
 }

@@ -8,4 +8,6 @@ import java.util.UUID;
 @Repository
 public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, UUID> {
     boolean existsByChaveAcesso(String chaveAcesso);
+
+    boolean existsByChaveAcessoAndIdNot(String chaveAcesso, UUID id);
 }

@@ -19,16 +19,17 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/uniforme")
-@Tag(name = "Uniforme", description = "Cadastro e gestão do estoque de uniformes")
+@Tag(name = "Uniforme", description = "Consulta do estoque de uniformes — atualizado automaticamente por lotes (entrada) e pedidos (saída)")
 @SecurityRequirement(name = "bearerAuth")
 public class UniformeController {
 
     private final UniformeService uniformeService;
 
     @GetMapping
-    @Operation(summary = "Listar uniformes", description = "Retorna uma lista paginada de uniformes. Ordenação disponível por: tamanho, quantidade, sexo (ex: sort=quantidade,desc)")
+    @Operation(summary = "Listar uniformes", description = "Retorna uma lista paginada de uniformes em estoque. Ordenação disponível por: tamanho, quantidade, sexo (ex: sort=quantidade,desc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetro de ordenação inválido"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
     })
     public ResponseEntity<Page<ResponseUniformeDTO>> buscarTodosUniformes(@ParameterObject Pageable pageable) {

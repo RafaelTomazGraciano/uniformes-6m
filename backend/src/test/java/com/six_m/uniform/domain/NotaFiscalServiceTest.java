@@ -1,13 +1,11 @@
 package com.six_m.uniform.domain;
 
-import com.six_m.uniform.domain.lote.LoteRepository;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalRepository;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalService;
 import com.six_m.uniform.domain.notaFiscal.dto.ResponseNotaFiscalDTO;
 import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,6 +30,27 @@ public class NotaFiscalServiceTest {
 
     @InjectMocks
     private NotaFiscalService notaFiscalService;
+
+    @Test
+    void deveCriarNotaFiscalParaLoteComSucesso() {
+        when(notaFiscalRepository.existsByChaveAcesso("chave-1")).thenReturn(false);
+        when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        NotaFiscal resultado = notaFiscalService.criarParaLote("chave-1");
+
+        assertEquals("chave-1", resultado.getChaveAcesso());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoChaveAcessoJaExisteAoCriarParaLote() {
+        when(notaFiscalRepository.existsByChaveAcesso("chave-1")).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> notaFiscalService.criarParaLote("chave-1"));
+
+        assertEquals("Já existe uma nota fiscal com esta chave de acesso", exception.getMessage());
+        verify(notaFiscalRepository, never()).save(any());
+    }
 
     @Test
     void deveBuscarTodasNotasFiscaisPaginado() {
@@ -83,4 +102,44 @@ public class NotaFiscalServiceTest {
 
         assertTrue(exception.getMessage().contains(id.toString()));
     }
+
+    @Test
+    void deveAtualizarNotaFiscalParaLoteComSucesso() {
+        UUID id = UUID.randomUUID();
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(id).chaveAcesso("chave-antiga").build();
+
+        when(notaFiscalRepository.existsByChaveAcessoAndIdNot("chave-nova", id)).thenReturn(false);
+        when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        NotaFiscal resultado = notaFiscalService.atualizarParaLote(notaFiscal, "chave-nova");
+
+        assertEquals("chave-nova", resultado.getChaveAcesso());
+    }
+
+    @Test
+    void devePermitirAtualizarNotaFiscalParaLoteMantendoAMesmaChave() {
+        UUID id = UUID.randomUUID();
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(id).chaveAcesso("chave-1").build();
+
+        when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        notaFiscalService.atualizarParaLote(notaFiscal, "chave-1");
+
+        verify(notaFiscalRepository, never()).existsByChaveAcessoAndIdNot(any(), any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoNovaChaveJaPertenceAOutraNotaFiscalAoAtualizarParaLote() {
+        UUID id = UUID.randomUUID();
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(id).chaveAcesso("chave-antiga").build();
+
+        when(notaFiscalRepository.existsByChaveAcessoAndIdNot("chave-de-outra", id)).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> notaFiscalService.atualizarParaLote(notaFiscal, "chave-de-outra"));
+
+        assertEquals("Já existe uma nota fiscal com esta chave de acesso", exception.getMessage());
+        verify(notaFiscalRepository, never()).save(any());
+    }
+
 }

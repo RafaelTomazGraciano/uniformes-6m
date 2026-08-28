@@ -1,8 +1,10 @@
 package com.six_m.uniform.domain.uniforme;
 
-import com.six_m.uniform.domain.tipoUniforme.TipoUniformeRepository;
+import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
 import com.six_m.uniform.exception.NotFoundException;
+import com.six_m.uniform.shared.enums.Sexo;
+import com.six_m.uniform.shared.enums.Tamanho;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,7 @@ import java.util.UUID;
 public class UniformeService {
 
     private final UniformeRepository uniformeRepository;
+    private final TipoUniformeService tipoUniformeService;
 
     @Transactional(readOnly = true)
     public Page<ResponseUniformeDTO> buscarTodosUniformes(Pageable pageable) {
@@ -26,6 +29,31 @@ public class UniformeService {
     @Transactional(readOnly = true)
     public ResponseUniformeDTO buscarUniforme(UUID id) {
         return toResponseDTO(buscarUniformeOuFalhar(id));
+    }
+
+    @Transactional
+    public Uniforme darEntrada(UUID tipoUniformeId, Tamanho tamanho, Sexo sexo, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoUniformeId, tamanho, sexo)
+                .orElseGet(() -> Uniforme.builder()
+                        .tipoUniforme(tipoUniformeService.buscarTipoUniformeEntidade(tipoUniformeId))
+                        .tamanho(tamanho)
+                        .sexo(sexo)
+                        .quantidade(0)
+                        .build());
+
+        uniforme.setQuantidade(uniforme.getQuantidade() + quantidade);
+
+        return uniformeRepository.save(uniforme);
+    }
+
+    @Transactional
+    public void estornarEntrada(UUID tipoUniformeId, Tamanho tamanho, Sexo sexo, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoUniformeId, tamanho, sexo)
+                .orElseThrow(() -> new NotFoundException("Uniforme não encontrado para estornar a entrada anterior"));
+
+        uniforme.setQuantidade(uniforme.getQuantidade() - quantidade);
+
+        uniformeRepository.save(uniforme);
     }
 
     private Uniforme buscarUniformeOuFalhar(UUID id) {

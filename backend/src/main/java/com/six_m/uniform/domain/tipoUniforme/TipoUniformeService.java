@@ -43,12 +43,12 @@ public class TipoUniformeService {
 
     @Transactional(readOnly = true)
     public ResponseTipoUniformeDTO buscarTipoUniforme(UUID id) {
-        return toResponseDTO(buscarTipoUniformeOuFalhar(id));
+        return toResponseDTO(buscarTipoUniformeEntidade(id));
     }
 
     @Transactional
     public ResponseTipoUniformeDTO atualizarTipoUniforme(UUID id, RequestAtualizarTipoUniformeDTO dto) {
-        TipoUniforme tipoUniforme = buscarTipoUniformeOuFalhar(id);
+        TipoUniforme tipoUniforme = buscarTipoUniformeEntidade(id);
 
         tipoUniforme.setTipo(dto.tipo());
 
@@ -59,7 +59,7 @@ public class TipoUniformeService {
 
     @Transactional
     public MessageResponseDTO deletarTipoUniforme(UUID id) {
-        TipoUniforme tipoUniforme = buscarTipoUniformeOuFalhar(id);
+        TipoUniforme tipoUniforme = buscarTipoUniformeEntidade(id);
 
         if (uniformeRepository.existsByTipoUniformeId(id)) {
             throw new BadRequestException("Não é possível excluir o tipo de uniforme: existem uniformes vinculados a ele");
@@ -74,7 +74,7 @@ public class TipoUniformeService {
         return new MessageResponseDTO("Tipo de uniforme deletado com sucesso");
     }
 
-    private TipoUniforme buscarTipoUniformeOuFalhar(UUID id) {
+    public TipoUniforme buscarTipoUniformeEntidade(UUID id) {
         return tipoUniformeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Tipo de uniforme não encontrado com o ID: " + id));
     }

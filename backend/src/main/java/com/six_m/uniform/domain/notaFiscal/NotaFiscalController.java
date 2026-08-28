@@ -19,7 +19,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/nota-fiscal")
-@Tag(name = "Nota Fiscal", description = "Cadastro e gestão de notas fiscais de fornecedores")
+@Tag(name = "Nota Fiscal", description = "Consulta de notas fiscais — o cadastro é feito automaticamente ao criar um lote")
 @SecurityRequirement(name = "bearerAuth")
 public class NotaFiscalController {
 
@@ -29,6 +29,7 @@ public class NotaFiscalController {
     @Operation(summary = "Listar notas fiscais", description = "Retorna uma lista paginada de notas fiscais. Ordenação disponível por: chaveAcesso (ex: sort=chaveAcesso,asc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetro de ordenação inválido"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
     })
     public ResponseEntity<Page<ResponseNotaFiscalDTO>> buscarTodasNotasFiscais(@ParameterObject Pageable pageable) {
