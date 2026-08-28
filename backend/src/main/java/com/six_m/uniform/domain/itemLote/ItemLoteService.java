@@ -2,7 +2,6 @@ package com.six_m.uniform.domain.itemLote;
 
 import com.six_m.uniform.domain.itemLote.dto.ResponseItemLoteDTO;
 import com.six_m.uniform.domain.lote.Lote;
-import com.six_m.uniform.domain.lote.dto.RequestCriarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.RequestItemEntradaDTO;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +59,12 @@ public class ItemLoteService {
     @Transactional(readOnly = true)
     public List<ItemLote> buscarItensPorLote(UUID loteId) {
         return itemLoteRepository.findByLoteId(loteId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, List<ItemLote>> buscarItensPorLotes(Collection<UUID> loteIds) {
+        return itemLoteRepository.findByLoteIdIn(loteIds).stream()
+                .collect(Collectors.groupingBy(item -> item.getLote().getId()));
     }
 
     @Transactional

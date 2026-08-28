@@ -6,6 +6,7 @@ import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeRepository;
 import com.six_m.uniform.domain.uniforme.UniformeService;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
@@ -145,6 +146,67 @@ public class UniformeServiceTest {
         assertThrows(NotFoundException.class,
                 () -> uniformeService.estornarEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10));
 
+        verify(uniformeRepository, never()).save(any());
+    }
+
+    @Test
+    void deveDarSaidaComSucessoQuandoHaEstoqueSuficiente() {
+        UUID uniformeId = UUID.randomUUID();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(10).build();
+
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.of(uniforme));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        uniformeService.darSaida(uniformeId, 6);
+
+        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
+        verify(uniformeRepository).save(captor.capture());
+        assertEquals(4, captor.getValue().getQuantidade());
+    }
+
+    @Test
+    void deveLancarExcecaoAoDarSaidaComQuantidadeMaiorQueEstoque() {
+        UUID uniformeId = UUID.randomUUID();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(5).build();
+
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.of(uniforme));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> uniformeService.darSaida(uniformeId, 10));
+
+        assertEquals("Quantidade solicitada (10) maior que o estoque disponível (5)", exception.getMessage());
+        verify(uniformeRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoUniformeNaoExisteAoDarSaida() {
+        UUID uniformeId = UUID.randomUUID();
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> uniformeService.darSaida(uniformeId, 5));
+    }
+
+    @Test
+    void deveEstornarSaidaSomandoQuantidade() {
+        UUID uniformeId = UUID.randomUUID();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(4).build();
+
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.of(uniforme));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        uniformeService.estornarSaida(uniformeId, 6);
+
+        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
+        verify(uniformeRepository).save(captor.capture());
+        assertEquals(10, captor.getValue().getQuantidade());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoUniformeNaoExisteAoEstornarSaida() {
+        UUID uniformeId = UUID.randomUUID();
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> uniformeService.estornarSaida(uniformeId, 5));
         verify(uniformeRepository, never()).save(any());
     }
 }

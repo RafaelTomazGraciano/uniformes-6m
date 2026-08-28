@@ -19,7 +19,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/pedido-uniforme")
-@Tag(name = "Pedido de Uniforme", description = "Cadastro e gestão dos itens de uniforme que compõem um pedido")
+@Tag(name = "Pedido de Uniforme", description = "Consulta dos itens de pedido — o cadastro é feito automaticamente ao criar/atualizar um pedido")
 @SecurityRequirement(name = "bearerAuth")
 public class PedidoUniformeController {
 

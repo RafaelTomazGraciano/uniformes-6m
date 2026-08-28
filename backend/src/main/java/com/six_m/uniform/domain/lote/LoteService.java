@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -51,8 +52,12 @@ public class LoteService {
 
     @Transactional(readOnly = true)
     public Page<ResponseLoteDTO> buscarTodosLotes(Pageable pageable) {
-        return loteRepository.findAll(pageable)
-                .map(lote -> toResponseDTO(lote, itemLoteService.buscarItensPorLote(lote.getId())));
+        Page<Lote> pagina = loteRepository.findAll(pageable);
+
+        List<UUID> loteIds = pagina.getContent().stream().map(Lote::getId).toList();
+        Map<UUID, List<ItemLote>> itensPorLote = itemLoteService.buscarItensPorLotes(loteIds);
+
+        return pagina.map(lote -> toResponseDTO(lote, itensPorLote.getOrDefault(lote.getId(), List.of())));
     }
 
     @Transactional(readOnly = true)

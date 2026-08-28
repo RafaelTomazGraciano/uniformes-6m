@@ -2,6 +2,7 @@ package com.six_m.uniform.domain.uniforme;
 
 import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
@@ -28,7 +29,7 @@ public class UniformeService {
 
     @Transactional(readOnly = true)
     public ResponseUniformeDTO buscarUniforme(UUID id) {
-        return toResponseDTO(buscarUniformeOuFalhar(id));
+        return toResponseDTO(buscarUniformeEntidade(id));
     }
 
     @Transactional
@@ -56,7 +57,29 @@ public class UniformeService {
         uniformeRepository.save(uniforme);
     }
 
-    private Uniforme buscarUniformeOuFalhar(UUID id) {
+    @Transactional
+    public void darSaida(UUID uniformeId, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.buscarComLockPorId(uniformeId)
+                .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + uniformeId));
+
+        if (uniforme.getQuantidade() < quantidade) {
+            throw new BadRequestException("Quantidade solicitada (" + quantidade + ") maior que o estoque disponível (" + uniforme.getQuantidade() + ")");
+        }
+
+        uniforme.setQuantidade(uniforme.getQuantidade() - quantidade);
+        uniformeRepository.save(uniforme);
+    }
+
+    @Transactional
+    public void estornarSaida(UUID uniformeId, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.buscarComLockPorId(uniformeId)
+                .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + uniformeId));
+
+        uniforme.setQuantidade(uniforme.getQuantidade() + quantidade);
+        uniformeRepository.save(uniforme);
+    }
+
+    public Uniforme buscarUniformeEntidade(UUID id) {
         return uniformeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + id));
     }

@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,15 +82,21 @@ public class LoteServiceTest {
 
     @Test
     void deveBuscarTodosLotesPaginadoComItens() {
-        Lote lote = Lote.builder().id(UUID.randomUUID()).notaFiscal(NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build()).fornecedor("Fornecedor A").build();
+        UUID loteId = UUID.randomUUID();
+        Lote lote = Lote.builder().id(loteId).notaFiscal(NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build()).fornecedor("Fornecedor A").build();
+
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        ItemLote item = ItemLote.builder().id(UUID.randomUUID()).lote(lote).tipoUniforme(tipoUniforme).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(10).build();
 
         Pageable pageable = PageRequest.of(0, 10);
         when(loteRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(lote), pageable, 1));
-        when(itemLoteService.buscarItensPorLote(lote.getId())).thenReturn(List.of());
+        when(itemLoteService.buscarItensPorLotes(List.of(loteId))).thenReturn(Map.of(loteId, List.of(item)));
 
         var resultado = loteService.buscarTodosLotes(pageable);
 
         assertEquals(1, resultado.getTotalElements());
+        assertEquals(1, resultado.getContent().getFirst().itens().size());
+        verify(itemLoteService, never()).buscarItensPorLote(any());
     }
 
     @Test
