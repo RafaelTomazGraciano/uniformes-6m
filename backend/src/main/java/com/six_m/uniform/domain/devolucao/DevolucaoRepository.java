@@ -7,4 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface DevolucaoRepository extends JpaRepository<Devolucao, UUID> {
+    boolean existsByPedidoUniformeId(UUID pedidoUniformeId);
 }

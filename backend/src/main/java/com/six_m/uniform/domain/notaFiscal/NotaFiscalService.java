@@ -1,12 +1,8 @@
 package com.six_m.uniform.domain.notaFiscal;
 
-import com.six_m.uniform.domain.lote.LoteRepository;
-import com.six_m.uniform.domain.notaFiscal.dto.RequestAtualizarNotaFiscalDTO;
-import com.six_m.uniform.domain.notaFiscal.dto.RequestCriarNotaFiscalDTO;
 import com.six_m.uniform.domain.notaFiscal.dto.ResponseNotaFiscalDTO;
 import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,22 +16,6 @@ import java.util.UUID;
 public class NotaFiscalService {
 
     private final NotaFiscalRepository notaFiscalRepository;
-    private final LoteRepository loteRepository;
-
-    @Transactional
-    public ResponseNotaFiscalDTO criarNotaFiscal(RequestCriarNotaFiscalDTO dto) {
-        if (notaFiscalRepository.existsByChaveAcesso(dto.chaveAcesso())) {
-            throw new BadRequestException("Já existe uma nota fiscal com esta chave de acesso");
-        }
-
-        NotaFiscal notaFiscal = NotaFiscal.builder()
-                .chaveAcesso(dto.chaveAcesso())
-                .build();
-
-        notaFiscal = notaFiscalRepository.save(notaFiscal);
-
-        return toResponseDTO(notaFiscal);
-    }
 
     @Transactional(readOnly = true)
     public Page<ResponseNotaFiscalDTO> buscarTodasNotasFiscais(Pageable pageable) {
@@ -49,32 +29,28 @@ public class NotaFiscalService {
     }
 
     @Transactional
-    public ResponseNotaFiscalDTO atualizarNotaFiscal(UUID id, RequestAtualizarNotaFiscalDTO dto) {
-        NotaFiscal notaFiscal = buscarNotaFiscalOuFalhar(id);
-
-        if (!notaFiscal.getChaveAcesso().equals(dto.chaveAcesso())
-                && notaFiscalRepository.existsByChaveAcesso(dto.chaveAcesso())) {
+    public NotaFiscal criarParaLote(String chaveAcesso) {
+        if (notaFiscalRepository.existsByChaveAcesso(chaveAcesso)) {
             throw new BadRequestException("Já existe uma nota fiscal com esta chave de acesso");
         }
 
-        notaFiscal.setChaveAcesso(dto.chaveAcesso());
+        NotaFiscal notaFiscal = NotaFiscal.builder()
+                .chaveAcesso(chaveAcesso)
+                .build();
 
-        notaFiscal = notaFiscalRepository.save(notaFiscal);
-
-        return toResponseDTO(notaFiscal);
+        return notaFiscalRepository.save(notaFiscal);
     }
 
     @Transactional
-    public MessageResponseDTO deletarNotaFiscal(UUID id) {
-        NotaFiscal notaFiscal = buscarNotaFiscalOuFalhar(id);
-
-        if (loteRepository.existsByNotaFiscalId(id)) {
-            throw new BadRequestException("Não é possível excluir a nota fiscal: existem lotes vinculados a ela");
+    public NotaFiscal atualizarParaLote(NotaFiscal notaFiscal, String novaChaveAcesso) {
+        if (!notaFiscal.getChaveAcesso().equals(novaChaveAcesso)
+                && notaFiscalRepository.existsByChaveAcessoAndIdNot(novaChaveAcesso, notaFiscal.getId())) {
+            throw new BadRequestException("Já existe uma nota fiscal com esta chave de acesso");
         }
 
-        notaFiscalRepository.delete(notaFiscal);
+        notaFiscal.setChaveAcesso(novaChaveAcesso);
 
-        return new MessageResponseDTO("Nota fiscal deletada com sucesso");
+        return notaFiscalRepository.save(notaFiscal);
     }
 
     private NotaFiscal buscarNotaFiscalOuFalhar(UUID id) {

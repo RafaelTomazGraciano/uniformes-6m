@@ -4,7 +4,6 @@ import com.six_m.uniform.domain.pedido.dto.RequestAtualizarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.RequestCriarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.ResponsePedidoDTO;
 import com.six_m.uniform.domain.usuario.Usuario;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,19 +25,19 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/pedido")
-@Tag(name = "Pedido", description = "Cadastro e gestão de pedidos de uniforme feitos para alunos")
+@Tag(name = "Pedido", description = "Cadastro de pedidos de uniforme para alunos. Ao criar/atualizar, o estoque é ajustado automaticamente")
 @SecurityRequirement(name = "bearerAuth")
 public class PedidoController {
 
     private final PedidoService pedidoService;
 
     @PostMapping
-    @Operation(summary = "Criar pedido", description = "Cadastra um novo pedido para um aluno. O usuário responsável é identificado pelo token, não pelo body")
+    @Operation(summary = "Criar pedido", description = "Cadastra um pedido com um ou mais itens de uniforme, decrementando o estoque de cada um. O usuário responsável é identificado pelo token, não pelo body")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Pedido criado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos, item duplicado no pedido, ou quantidade solicitada maior que o estoque disponível"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
-            @ApiResponse(responseCode = "404", description = "Aluno não encontrado")
+            @ApiResponse(responseCode = "404", description = "Aluno ou uniforme não encontrados")
     })
     public ResponseEntity<ResponsePedidoDTO> criarPedido(
             @Valid @RequestBody RequestCriarPedidoDTO request,
@@ -71,28 +70,16 @@ public class PedidoController {
     }
 
     @PutMapping("{id}")
-    @Operation(summary = "Atualizar pedido", description = "Atualiza o aluno e/ou a data de efetivação de um pedido existente")
+    @Operation(summary = "Atualizar pedido", description = "Substitui os itens do pedido: devolve ao estoque a quantidade dos itens antigos e decrementa a dos novos")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Pedido atualizado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos, item duplicado no pedido, ou quantidade solicitada maior que o estoque disponível"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
-            @ApiResponse(responseCode = "404", description = "Pedido ou aluno não encontrados")
+            @ApiResponse(responseCode = "404", description = "Pedido, aluno ou uniforme não encontrados")
     })
     public ResponseEntity<ResponsePedidoDTO> atualizarPedido(
             @Parameter(description = "Identificador do pedido") @PathVariable UUID id,
             @Valid @RequestBody RequestAtualizarPedidoDTO request) {
         return ResponseEntity.ok(pedidoService.atualizarPedido(id, request));
-    }
-
-    @DeleteMapping("{id}")
-    @Operation(summary = "Deletar pedido")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Pedido deletado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
-            @ApiResponse(responseCode = "404", description = "Pedido não encontrado")
-    })
-    public ResponseEntity<MessageResponseDTO> deletarPedido(
-            @Parameter(description = "Identificador do pedido") @PathVariable UUID id) {
-        return ResponseEntity.ok(pedidoService.deletarPedido(id));
     }
 }

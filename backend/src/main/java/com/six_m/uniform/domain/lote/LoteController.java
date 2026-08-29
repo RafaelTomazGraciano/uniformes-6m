@@ -3,7 +3,6 @@ package com.six_m.uniform.domain.lote;
 import com.six_m.uniform.domain.lote.dto.RequestAtualizarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.RequestCriarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.ResponseLoteDTO;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -77,18 +76,5 @@ public class LoteController {
             @Parameter(description = "Identificador do lote") @PathVariable UUID id,
             @Valid @RequestBody RequestAtualizarLoteDTO request) {
         return ResponseEntity.ok(loteService.atualizarLote(id, request));
-    }
-
-    @DeleteMapping("{id}")
-    @Operation(summary = "Deletar lote", description = "Remove um lote. Só é possível se não houver itens vinculados a ele")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lote deletado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Existem itens vinculados ao lote"),
-            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
-            @ApiResponse(responseCode = "404", description = "Lote não encontrado")
-    })
-    public ResponseEntity<MessageResponseDTO> deletarLote(
-            @Parameter(description = "Identificador do lote") @PathVariable UUID id) {
-        return ResponseEntity.ok(loteService.deletarLote(id));
     }
 }

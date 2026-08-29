@@ -1,12 +1,11 @@
 package com.six_m.uniform.domain.uniforme;
 
-import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
-import com.six_m.uniform.domain.tipoUniforme.TipoUniformeRepository;
-import com.six_m.uniform.domain.uniforme.dto.RequestAtualizarUniformeDTO;
-import com.six_m.uniform.domain.uniforme.dto.RequestCriarUniformeDTO;
+import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
+import com.six_m.uniform.shared.enums.Sexo;
+import com.six_m.uniform.shared.enums.Tamanho;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,23 +19,7 @@ import java.util.UUID;
 public class UniformeService {
 
     private final UniformeRepository uniformeRepository;
-    private final TipoUniformeRepository tipoUniformeRepository;
-
-    @Transactional
-    public ResponseUniformeDTO criarUniforme(RequestCriarUniformeDTO dto) {
-        TipoUniforme tipoUniforme = buscarTipoUniformeOuFalhar(dto.tipoUniformeId());
-
-        Uniforme uniforme = Uniforme.builder()
-                .tipoUniforme(tipoUniforme)
-                .tamanho(dto.tamanho())
-                .quantidade(dto.quantidade())
-                .sexo(dto.sexo())
-                .build();
-
-        uniforme = uniformeRepository.save(uniforme);
-
-        return toResponseDTO(uniforme);
-    }
+    private final TipoUniformeService tipoUniformeService;
 
     @Transactional(readOnly = true)
     public Page<ResponseUniformeDTO> buscarTodosUniformes(Pageable pageable) {
@@ -46,39 +29,59 @@ public class UniformeService {
 
     @Transactional(readOnly = true)
     public ResponseUniformeDTO buscarUniforme(UUID id) {
-        return toResponseDTO(buscarUniformeOuFalhar(id));
+        return toResponseDTO(buscarUniformeEntidade(id));
     }
 
     @Transactional
-    public ResponseUniformeDTO atualizarUniforme(UUID id, RequestAtualizarUniformeDTO dto) {
-        Uniforme uniforme = buscarUniformeOuFalhar(id);
-        TipoUniforme tipoUniforme = buscarTipoUniformeOuFalhar(dto.tipoUniformeId());
+    public Uniforme darEntrada(UUID tipoUniformeId, Tamanho tamanho, Sexo sexo, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoUniformeId, tamanho, sexo)
+                .orElseGet(() -> Uniforme.builder()
+                        .tipoUniforme(tipoUniformeService.buscarTipoUniformeEntidade(tipoUniformeId))
+                        .tamanho(tamanho)
+                        .sexo(sexo)
+                        .quantidade(0)
+                        .build());
 
-        uniforme.setTipoUniforme(tipoUniforme);
-        uniforme.setTamanho(dto.tamanho());
-        uniforme.setQuantidade(dto.quantidade());
-        uniforme.setSexo(dto.sexo());
+        uniforme.setQuantidade(uniforme.getQuantidade() + quantidade);
 
-        uniforme = uniformeRepository.save(uniforme);
-
-        return toResponseDTO(uniforme);
+        return uniformeRepository.save(uniforme);
     }
 
     @Transactional
-    public MessageResponseDTO deletarUniforme(UUID id) {
-        Uniforme uniforme = buscarUniformeOuFalhar(id);
-        uniformeRepository.delete(uniforme);
-        return new MessageResponseDTO("Uniforme deletado com sucesso");
+    public void estornarEntrada(UUID tipoUniformeId, Tamanho tamanho, Sexo sexo, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoUniformeId, tamanho, sexo)
+                .orElseThrow(() -> new NotFoundException("Uniforme não encontrado para estornar a entrada anterior"));
+
+        uniforme.setQuantidade(uniforme.getQuantidade() - quantidade);
+
+        uniformeRepository.save(uniforme);
     }
 
-    private Uniforme buscarUniformeOuFalhar(UUID id) {
+    @Transactional
+    public void darSaida(UUID uniformeId, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.buscarComLockPorId(uniformeId)
+                .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + uniformeId));
+
+        if (uniforme.getQuantidade() < quantidade) {
+            throw new BadRequestException("Quantidade solicitada (" + quantidade + ") maior que o estoque disponível (" + uniforme.getQuantidade() + ")");
+        }
+
+        uniforme.setQuantidade(uniforme.getQuantidade() - quantidade);
+        uniformeRepository.save(uniforme);
+    }
+
+    @Transactional
+    public void estornarSaida(UUID uniformeId, Integer quantidade) {
+        Uniforme uniforme = uniformeRepository.buscarComLockPorId(uniformeId)
+                .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + uniformeId));
+
+        uniforme.setQuantidade(uniforme.getQuantidade() + quantidade);
+        uniformeRepository.save(uniforme);
+    }
+
+    public Uniforme buscarUniformeEntidade(UUID id) {
         return uniformeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + id));
-    }
-
-    private TipoUniforme buscarTipoUniformeOuFalhar(UUID id) {
-        return tipoUniformeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tipo de uniforme não encontrado com o ID: " + id));
     }
 
     private ResponseUniformeDTO toResponseDTO(Uniforme uniforme) {

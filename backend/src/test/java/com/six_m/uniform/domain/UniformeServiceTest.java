@@ -1,15 +1,13 @@
 package com.six_m.uniform.domain;
 
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
-import com.six_m.uniform.domain.tipoUniforme.TipoUniformeRepository;
+import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
 import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeRepository;
 import com.six_m.uniform.domain.uniforme.UniformeService;
-import com.six_m.uniform.domain.uniforme.dto.RequestAtualizarUniformeDTO;
-import com.six_m.uniform.domain.uniforme.dto.RequestCriarUniformeDTO;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
@@ -36,69 +34,10 @@ public class UniformeServiceTest {
     private UniformeRepository uniformeRepository;
 
     @Mock
-    private TipoUniformeRepository tipoUniformeRepository;
+    private TipoUniformeService tipoUniformeService;
 
     @InjectMocks
     private UniformeService uniformeService;
-
-    @Test
-    void deveCriarUniformeComSucesso() {
-        UUID tipoId = UUID.randomUUID();
-        TipoUniforme tipoUniforme = TipoUniforme.builder().id(tipoId).tipo("Camiseta").build();
-        RequestCriarUniformeDTO dto = new RequestCriarUniformeDTO(tipoId, Tamanho.M, 10, Sexo.MASCULINO);
-
-        when(tipoUniformeRepository.findById(tipoId)).thenReturn(Optional.of(tipoUniforme));
-
-        UUID idGerado = UUID.randomUUID();
-        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> {
-            Uniforme salvo = invocation.getArgument(0);
-            salvo.setId(idGerado);
-            return salvo;
-        });
-
-        ResponseUniformeDTO response = uniformeService.criarUniforme(dto);
-
-        assertEquals(idGerado, response.id());
-        assertEquals(tipoId, response.tipoUniformeId());
-        assertEquals("Camiseta", response.tipoUniformeNome());
-        assertEquals(Tamanho.M, response.tamanho());
-        assertEquals(10, response.quantidade());
-        assertEquals(Sexo.MASCULINO, response.sexo());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoTipoUniformeNaoExisteAoCriar() {
-        UUID tipoId = UUID.randomUUID();
-        RequestCriarUniformeDTO dto = new RequestCriarUniformeDTO(tipoId, Tamanho.M, 10, Sexo.MASCULINO);
-
-        when(tipoUniformeRepository.findById(tipoId)).thenReturn(Optional.empty());
-
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> uniformeService.criarUniforme(dto));
-
-        assertTrue(exception.getMessage().contains(tipoId.toString()));
-        verify(uniformeRepository, never()).save(any());
-    }
-
-    @Test
-    void deveSalvarUniformeComOsCamposCorretosAoCriar() {
-        UUID tipoId = UUID.randomUUID();
-        TipoUniforme tipoUniforme = TipoUniforme.builder().id(tipoId).tipo("Calça").build();
-        RequestCriarUniformeDTO dto = new RequestCriarUniformeDTO(tipoId, Tamanho.GG, 5, Sexo.FEMININO);
-
-        when(tipoUniformeRepository.findById(tipoId)).thenReturn(Optional.of(tipoUniforme));
-        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        uniformeService.criarUniforme(dto);
-
-        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
-        verify(uniformeRepository).save(captor.capture());
-
-        assertEquals(tipoUniforme, captor.getValue().getTipoUniforme());
-        assertEquals(Tamanho.GG, captor.getValue().getTamanho());
-        assertEquals(5, captor.getValue().getQuantidade());
-        assertEquals(Sexo.FEMININO, captor.getValue().getSexo());
-    }
 
     @Test
     void deveBuscarTodosUniformesPaginado() {
@@ -151,80 +90,123 @@ public class UniformeServiceTest {
     }
 
     @Test
-    void deveAtualizarUniformeComSucesso() {
-        UUID id = UUID.randomUUID();
-        UUID novoTipoId = UUID.randomUUID();
+    void deveDarEntradaSomandoQuantidadeQuandoUniformeJaExiste() {
+        UUID tipoId = UUID.randomUUID();
+        Uniforme existente = Uniforme.builder().id(UUID.randomUUID()).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(5).build();
 
-        TipoUniforme tipoAntigo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
-        TipoUniforme tipoNovo = TipoUniforme.builder().id(novoTipoId).tipo("Calça").build();
-        Uniforme uniformeExistente = Uniforme.builder().id(id).tipoUniforme(tipoAntigo).tamanho(Tamanho.P).quantidade(5).sexo(Sexo.MASCULINO).build();
-
-        RequestAtualizarUniformeDTO dto = new RequestAtualizarUniformeDTO(novoTipoId, Tamanho.GG, 20, Sexo.FEMININO);
-
-        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniformeExistente));
-        when(tipoUniformeRepository.findById(novoTipoId)).thenReturn(Optional.of(tipoNovo));
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.of(existente));
         when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ResponseUniformeDTO response = uniformeService.atualizarUniforme(id, dto);
+        Uniforme resultado = uniformeService.darEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10);
 
-        assertEquals(novoTipoId, response.tipoUniformeId());
-        assertEquals("Calça", response.tipoUniformeNome());
-        assertEquals(Tamanho.GG, response.tamanho());
-        assertEquals(20, response.quantidade());
-        assertEquals(Sexo.FEMININO, response.sexo());
+        assertEquals(15, resultado.getQuantidade());
+        verify(tipoUniformeService, never()).buscarTipoUniformeEntidade(any());
     }
 
     @Test
-    void deveLancarExcecaoQuandoUniformeNaoExisteAoAtualizar() {
-        UUID id = UUID.randomUUID();
-        RequestAtualizarUniformeDTO dto = new RequestAtualizarUniformeDTO(UUID.randomUUID(), Tamanho.M, 10, Sexo.MASCULINO);
+    void deveDarEntradaCriandoNovoUniformeQuandoNaoExiste() {
+        UUID tipoId = UUID.randomUUID();
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(tipoId).tipo("Camiseta").build();
 
-        when(uniformeRepository.findById(id)).thenReturn(Optional.empty());
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.empty());
+        when(tipoUniformeService.buscarTipoUniformeEntidade(tipoId)).thenReturn(tipoUniforme);
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThrows(NotFoundException.class, () -> uniformeService.atualizarUniforme(id, dto));
-        verify(tipoUniformeRepository, never()).findById(any());
-        verify(uniformeRepository, never()).save(any());
+        Uniforme resultado = uniformeService.darEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10);
+
+        assertEquals(10, resultado.getQuantidade());
+        assertEquals(tipoUniforme, resultado.getTipoUniforme());
     }
 
     @Test
-    void deveLancarExcecaoQuandoNovoTipoUniformeNaoExisteAoAtualizar() {
-        UUID id = UUID.randomUUID();
+    void deveEstornarEntradaSubtraindoQuantidade() {
+        UUID tipoId = UUID.randomUUID();
+        Uniforme existente = Uniforme.builder().id(UUID.randomUUID()).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(15).build();
+
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.of(existente));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        uniformeService.estornarEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10);
+
+        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
+        verify(uniformeRepository).save(captor.capture());
+        assertEquals(5, captor.getValue().getQuantidade());
+    }
+
+    @Test
+    void deveLancarExcecaoAoEstornarEntradaQuandoUniformeNaoExiste() {
         UUID tipoId = UUID.randomUUID();
 
-        TipoUniforme tipoAntigo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
-        Uniforme uniformeExistente = Uniforme.builder().id(id).tipoUniforme(tipoAntigo).tamanho(Tamanho.M).quantidade(10).sexo(Sexo.MASCULINO).build();
-        RequestAtualizarUniformeDTO dto = new RequestAtualizarUniformeDTO(tipoId, Tamanho.M, 10, Sexo.MASCULINO);
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.empty());
 
-        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniformeExistente));
-        when(tipoUniformeRepository.findById(tipoId)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class,
+                () -> uniformeService.estornarEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10));
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> uniformeService.atualizarUniforme(id, dto));
-
-        assertTrue(exception.getMessage().contains(tipoId.toString()));
         verify(uniformeRepository, never()).save(any());
     }
 
     @Test
-    void deveDeletarUniformeComSucesso() {
-        UUID id = UUID.randomUUID();
-        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
-        Uniforme uniforme = Uniforme.builder().id(id).tipoUniforme(tipo).tamanho(Tamanho.M).quantidade(10).sexo(Sexo.MASCULINO).build();
+    void deveDarSaidaComSucessoQuandoHaEstoqueSuficiente() {
+        UUID uniformeId = UUID.randomUUID();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(10).build();
 
-        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniforme));
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.of(uniforme));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        MessageResponseDTO resultado = uniformeService.deletarUniforme(id);
+        uniformeService.darSaida(uniformeId, 6);
 
-        assertEquals("Uniforme deletado com sucesso", resultado.message());
-        verify(uniformeRepository).delete(uniforme);
+        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
+        verify(uniformeRepository).save(captor.capture());
+        assertEquals(4, captor.getValue().getQuantidade());
     }
 
     @Test
-    void deveLancarExcecaoQuandoUniformeNaoExisteAoDeletar() {
-        UUID id = UUID.randomUUID();
-        when(uniformeRepository.findById(id)).thenReturn(Optional.empty());
+    void deveLancarExcecaoAoDarSaidaComQuantidadeMaiorQueEstoque() {
+        UUID uniformeId = UUID.randomUUID();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(5).build();
 
-        assertThrows(NotFoundException.class, () -> uniformeService.deletarUniforme(id));
-        verify(uniformeRepository, never()).delete(any());
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.of(uniforme));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> uniformeService.darSaida(uniformeId, 10));
+
+        assertEquals("Quantidade solicitada (10) maior que o estoque disponível (5)", exception.getMessage());
+        verify(uniformeRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoUniformeNaoExisteAoDarSaida() {
+        UUID uniformeId = UUID.randomUUID();
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> uniformeService.darSaida(uniformeId, 5));
+    }
+
+    @Test
+    void deveEstornarSaidaSomandoQuantidade() {
+        UUID uniformeId = UUID.randomUUID();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(4).build();
+
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.of(uniforme));
+        when(uniformeRepository.save(any(Uniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        uniformeService.estornarSaida(uniformeId, 6);
+
+        ArgumentCaptor<Uniforme> captor = ArgumentCaptor.forClass(Uniforme.class);
+        verify(uniformeRepository).save(captor.capture());
+        assertEquals(10, captor.getValue().getQuantidade());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoUniformeNaoExisteAoEstornarSaida() {
+        UUID uniformeId = UUID.randomUUID();
+        when(uniformeRepository.buscarComLockPorId(uniformeId)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> uniformeService.estornarSaida(uniformeId, 5));
+        verify(uniformeRepository, never()).save(any());
     }
 }

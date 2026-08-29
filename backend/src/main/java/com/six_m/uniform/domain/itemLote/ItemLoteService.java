@@ -1,47 +1,27 @@
 package com.six_m.uniform.domain.itemLote;
 
-import com.six_m.uniform.domain.itemLote.dto.RequestAtualizarItemLoteDTO;
-import com.six_m.uniform.domain.itemLote.dto.RequestCriarItemLoteDTO;
 import com.six_m.uniform.domain.itemLote.dto.ResponseItemLoteDTO;
 import com.six_m.uniform.domain.lote.Lote;
-import com.six_m.uniform.domain.lote.LoteRepository;
+import com.six_m.uniform.domain.lote.dto.RequestItemEntradaDTO;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
-import com.six_m.uniform.domain.tipoUniforme.TipoUniformeRepository;
+import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ItemLoteService {
 
     private final ItemLoteRepository itemLoteRepository;
-    private final TipoUniformeRepository tipoUniformeRepository;
-    private final LoteRepository loteRepository;
-
-    @Transactional
-    public ResponseItemLoteDTO criarItemLote(RequestCriarItemLoteDTO dto) {
-        TipoUniforme tipoUniforme = buscarTipoUniformeOuFalhar(dto.tipoUniformeId());
-        Lote lote = buscarLoteOuFalhar(dto.loteId());
-
-        ItemLote itemLote = ItemLote.builder()
-                .tipoUniforme(tipoUniforme)
-                .lote(lote)
-                .tamanho(dto.tamanho())
-                .quantidade(dto.quantidade())
-                .sexo(dto.sexo())
-                .build();
-
-        itemLote = itemLoteRepository.save(itemLote);
-
-        return toResponseDTO(itemLote);
-    }
+    private final TipoUniformeService tipoUniformeService;
 
     @Transactional(readOnly = true)
     public Page<ResponseItemLoteDTO> buscarTodosItensLote(Pageable pageable) {
@@ -55,27 +35,41 @@ public class ItemLoteService {
     }
 
     @Transactional
-    public ResponseItemLoteDTO atualizarItemLote(UUID id, RequestAtualizarItemLoteDTO dto) {
-        ItemLote itemLote = buscarItemLoteOuFalhar(id);
-        TipoUniforme tipoUniforme = buscarTipoUniformeOuFalhar(dto.tipoUniformeId());
-        Lote lote = buscarLoteOuFalhar(dto.loteId());
+    public List<ItemLote> criarItensParaLote(Lote lote, List<RequestItemEntradaDTO> itensDto) {
+        validarItensSemDuplicidade(itensDto);
 
-        itemLote.setTipoUniforme(tipoUniforme);
-        itemLote.setLote(lote);
-        itemLote.setTamanho(dto.tamanho());
-        itemLote.setQuantidade(dto.quantidade());
-        itemLote.setSexo(dto.sexo());
+        List<ItemLote> itens = new ArrayList<>();
+        for (RequestItemEntradaDTO itemDto : itensDto) {
+            TipoUniforme tipoUniforme = tipoUniformeService.buscarTipoUniformeEntidade(itemDto.tipoUniformeId());
 
-        itemLote = itemLoteRepository.save(itemLote);
+            ItemLote itemLote = ItemLote.builder()
+                    .tipoUniforme(tipoUniforme)
+                    .lote(lote)
+                    .tamanho(itemDto.tamanho())
+                    .sexo(itemDto.sexo())
+                    .quantidade(itemDto.quantidade())
+                    .build();
 
-        return toResponseDTO(itemLote);
+            itens.add(itemLoteRepository.save(itemLote));
+        }
+
+        return itens;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemLote> buscarItensPorLote(UUID loteId) {
+        return itemLoteRepository.findByLoteId(loteId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, List<ItemLote>> buscarItensPorLotes(Collection<UUID> loteIds) {
+        return itemLoteRepository.findByLoteIdIn(loteIds).stream()
+                .collect(Collectors.groupingBy(item -> item.getLote().getId()));
     }
 
     @Transactional
-    public MessageResponseDTO deletarItemLote(UUID id) {
-        ItemLote itemLote = buscarItemLoteOuFalhar(id);
-        itemLoteRepository.delete(itemLote);
-        return new MessageResponseDTO("Item de lote deletado com sucesso");
+    public void deletarItensPorLote(List<ItemLote> itens) {
+        itemLoteRepository.deleteAll(itens);
     }
 
     private ItemLote buscarItemLoteOuFalhar(UUID id) {
@@ -83,14 +77,14 @@ public class ItemLoteService {
                 .orElseThrow(() -> new NotFoundException("Item de lote não encontrado com o ID: " + id));
     }
 
-    private TipoUniforme buscarTipoUniformeOuFalhar(UUID id) {
-        return tipoUniformeRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tipo de uniforme não encontrado com o ID: " + id));
-    }
-
-    private Lote buscarLoteOuFalhar(UUID id) {
-        return loteRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Lote não encontrado com o ID: " + id));
+    private void validarItensSemDuplicidade(List<RequestItemEntradaDTO> itensDto) {
+        Set<String> combinacoesVistas = new HashSet<>();
+        for (RequestItemEntradaDTO item : itensDto) {
+            String chave = item.tipoUniformeId() + "|" + item.tamanho() + "|" + item.sexo();
+            if (!combinacoesVistas.add(chave)) {
+                throw new BadRequestException("Item duplicado no lote: mesmo tipo de uniforme, tamanho e sexo informados mais de uma vez");
+            }
+        }
     }
 
     private ResponseItemLoteDTO toResponseDTO(ItemLote itemLote) {

@@ -1,6 +1,9 @@
 package com.six_m.uniform.domain.lote.dto;
 
+import com.six_m.uniform.domain.itemLote.dto.ResponseItemLoteDTO;
+
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ResponseLoteDTO(
@@ -8,6 +11,7 @@ public record ResponseLoteDTO(
         UUID notaFiscalId,
         String notaFiscalChaveAcesso,
         String fornecedor,
-        LocalDateTime dataEntrega
+        LocalDateTime dataEntrega,
+        List<ResponseItemLoteDTO> itens
 ) {
 }

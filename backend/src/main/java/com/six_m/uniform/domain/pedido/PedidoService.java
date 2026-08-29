@@ -5,17 +5,20 @@ import com.six_m.uniform.domain.aluno.AlunoRepository;
 import com.six_m.uniform.domain.pedido.dto.RequestAtualizarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.RequestCriarPedidoDTO;
 import com.six_m.uniform.domain.pedido.dto.ResponsePedidoDTO;
-import com.six_m.uniform.domain.pedidoUniforme.PedidoUniformeRepository;
+import com.six_m.uniform.domain.pedidoUniforme.PedidoUniforme;
+import com.six_m.uniform.domain.pedidoUniforme.PedidoUniformeService;
+import com.six_m.uniform.domain.pedidoUniforme.dto.ResponsePedidoUniformeDTO;
+import com.six_m.uniform.domain.uniforme.UniformeService;
 import com.six_m.uniform.domain.usuario.Usuario;
-import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
-import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -23,8 +26,9 @@ import java.util.UUID;
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
-    private final PedidoUniformeRepository pedidoUniformeRepository;
     private final AlunoRepository alunoRepository;
+    private final PedidoUniformeService pedidoUniformeService;
+    private final UniformeService uniformeService;
 
     @Transactional
     public ResponsePedidoDTO criarPedido(RequestCriarPedidoDTO dto, Usuario usuario) {
@@ -38,18 +42,30 @@ public class PedidoService {
 
         pedido = pedidoRepository.save(pedido);
 
-        return toResponseDTO(pedido);
+        List<PedidoUniforme> itens = pedidoUniformeService.criarItensParaPedido(pedido, dto.itens());
+
+        for (PedidoUniforme item : itens) {
+            uniformeService.darSaida(item.getUniforme().getId(), item.getQuantidade());
+        }
+
+        return toResponseDTO(pedido, itens);
     }
 
     @Transactional(readOnly = true)
     public Page<ResponsePedidoDTO> buscarTodosPedidos(Pageable pageable) {
-        return pedidoRepository.findAll(pageable)
-                .map(this::toResponseDTO);
+        Page<Pedido> pagina = pedidoRepository.findAll(pageable);
+
+        List<UUID> pedidoIds = pagina.getContent().stream().map(Pedido::getId).toList();
+        Map<UUID, List<PedidoUniforme>> itensPorPedido = pedidoUniformeService.buscarItensPorPedidos(pedidoIds);
+
+        return pagina.map(pedido -> toResponseDTO(pedido, itensPorPedido.getOrDefault(pedido.getId(), List.of())));
     }
 
     @Transactional(readOnly = true)
     public ResponsePedidoDTO buscarPedido(UUID id) {
-        return toResponseDTO(buscarPedidoOuFalhar(id));
+        Pedido pedido = buscarPedidoOuFalhar(id);
+        List<PedidoUniforme> itens = pedidoUniformeService.buscarItensPorPedido(id);
+        return toResponseDTO(pedido, itens);
     }
 
     @Transactional
@@ -57,24 +73,22 @@ public class PedidoService {
         Pedido pedido = buscarPedidoOuFalhar(id);
         Aluno aluno = buscarAlunoOuFalhar(dto.alunoId());
 
-        pedido.setAluno(aluno);
-        pedido.setDataEfetivada(dto.dataEfetivada());
+        List<PedidoUniforme> itensAntigos = pedidoUniformeService.buscarItensPorPedido(id);
+        for (PedidoUniforme itemAntigo : itensAntigos) {
+            uniformeService.estornarSaida(itemAntigo.getUniforme().getId(), itemAntigo.getQuantidade());
+        }
+        pedidoUniformeService.deletarItensPorPedido(itensAntigos);
 
-        pedido = pedidoRepository.save(pedido);
-
-        return toResponseDTO(pedido);
-    }
-
-    @Transactional
-    public MessageResponseDTO deletarPedido(UUID id) {
-        Pedido pedido = buscarPedidoOuFalhar(id);
-
-        if (pedidoUniformeRepository.existsByPedidoId(id)) {
-            throw new BadRequestException("Não é possível excluir o pedido: existem itens de uniforme vinculados a ele");
+        List<PedidoUniforme> itensNovos = pedidoUniformeService.criarItensParaPedido(pedido, dto.itens());
+        for (PedidoUniforme itemNovo : itensNovos) {
+            uniformeService.darSaida(itemNovo.getUniforme().getId(), itemNovo.getQuantidade());
         }
 
-        pedidoRepository.delete(pedido);
-        return new MessageResponseDTO("Pedido deletado com sucesso");
+        pedido.setAluno(aluno);
+        pedido.setDataEfetivada(dto.dataEfetivada());
+        pedido = pedidoRepository.save(pedido);
+
+        return toResponseDTO(pedido, itensNovos);
     }
 
     private Pedido buscarPedidoOuFalhar(UUID id) {
@@ -87,14 +101,27 @@ public class PedidoService {
                 .orElseThrow(() -> new NotFoundException("Aluno não encontrado com o ID: " + id));
     }
 
-    private ResponsePedidoDTO toResponseDTO(Pedido pedido) {
+    private ResponsePedidoDTO toResponseDTO(Pedido pedido, List<PedidoUniforme> itens) {
+        List<ResponsePedidoUniformeDTO> itensDto = itens.stream()
+                .map(item -> new ResponsePedidoUniformeDTO(
+                        item.getId(),
+                        pedido.getId(),
+                        item.getUniforme().getId(),
+                        item.getUniforme().getTipoUniforme().getTipo(),
+                        item.getUniforme().getTamanho(),
+                        item.getUniforme().getSexo(),
+                        item.getQuantidade()
+                ))
+                .toList();
+
         return new ResponsePedidoDTO(
                 pedido.getId(),
                 pedido.getAluno().getId(),
                 pedido.getAluno().getNome(),
                 pedido.getUsuario().getId(),
                 pedido.getUsuario().getNome(),
-                pedido.getDataEfetivada()
+                pedido.getDataEfetivada(),
+                itensDto
         );
     }
 }
