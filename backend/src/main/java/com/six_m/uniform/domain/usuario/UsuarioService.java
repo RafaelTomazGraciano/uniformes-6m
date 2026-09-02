@@ -2,6 +2,7 @@ package com.six_m.uniform.domain.usuario;
 
 import com.six_m.uniform.domain.usuario.dto.*;
 import com.six_m.uniform.exception.BadRequestException;
+import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,6 +53,17 @@ public class UsuarioService {
         usuario = usuarioRepository.save(usuario);
 
         return new ResponseUsuarioDTO(usuario.getId(), usuario.getNome(), usuario.getEmail());
+    }
+
+    @Transactional
+    public MessageResponseDTO trocarSenha(RequestTrocarSenhaDTO dto) {
+        Usuario usuario = usuarioRepository.findByEmail(dto.email())
+                .orElseThrow(() -> new NotFoundException("Usuário não encontrado com o email informado"));
+
+        usuario.setSenha(passwordEncoder.encode(dto.novaSenha()));
+        usuarioRepository.save(usuario);
+
+        return new MessageResponseDTO("Senha atualizada com sucesso");
     }
 
     @Transactional
