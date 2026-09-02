@@ -31,12 +31,6 @@ CREATE TYPE "ensino" AS ENUM (
   'TECNICO'
 );
 
-CREATE TYPE "situacao_devolucao" AS ENUM (
-  'BOM_ESTADO',
-  'DANIFICADO',
-  'PERDIDO'
-);
-
 CREATE TABLE "escola" (
                           "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
                           "nome" varchar(255) NOT NULL,
@@ -71,15 +65,6 @@ CREATE TABLE "turma" (
                          "nome" varchar(255) NOT NULL,
                          "turno" turno NOT NULL,
                          "ensino" ensino NOT NULL
-);
-
-CREATE TABLE "devolucao" (
-                             "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-                             "pedido_uniforme_id" uuid NOT NULL,
-                             "usuario_id" uuid NOT NULL,
-                             "quantidade" int NOT NULL,
-                             "situacao" situacao_devolucao NOT NULL DEFAULT 'BOM_ESTADO',
-                             "data_devolucao" timestamp NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "aluno" (
@@ -127,10 +112,6 @@ CREATE TABLE "lote" (
 CREATE INDEX "idx_nome" ON "aluno" ("nome");
 
 ALTER TABLE "uniforme" ADD FOREIGN KEY ("tipo_id") REFERENCES "tipo_uniforme" ("id") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "devolucao" ADD FOREIGN KEY ("pedido_uniforme_id") REFERENCES "pedido_uniforme" ("id") DEFERRABLE INITIALLY IMMEDIATE;
-
-ALTER TABLE "devolucao" ADD FOREIGN KEY ("usuario_id") REFERENCES "usuario" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "aluno" ADD FOREIGN KEY ("turma_id") REFERENCES "turma" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 

@@ -3,6 +3,8 @@ package com.six_m.uniform.domain;
 import com.six_m.uniform.domain.usuario.Usuario;
 import com.six_m.uniform.domain.usuario.UsuarioRepository;
 import com.six_m.uniform.domain.usuario.UsuarioService;
+import com.six_m.uniform.domain.usuario.dto.RequestTrocarSenhaDTO;
+import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestAtualizarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
@@ -161,6 +163,64 @@ public class UsuarioServiceTest {
 
         assertEquals("Este email não existe", exception.getMessage());
         verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void deveTrocarSenhaComSucesso() {
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "novaSenha123");
+
+        Usuario usuario = Usuario.builder()
+                .id(UUID.randomUUID())
+                .nome("Rafael")
+                .email("rafael@teste.com")
+                .senha("senha-antiga-criptografada")
+                .build();
+
+        when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.encode("novaSenha123")).thenReturn("senha-nova-criptografada");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MessageResponseDTO resultado = usuarioService.trocarSenha(dto);
+
+        assertEquals("Senha atualizada com sucesso", resultado.message());
+    }
+
+    @Test
+    void deveCriptografarNovaSenhaAntesDeSalvarAoTrocarSenha() {
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "senha-pura-nova");
+
+        Usuario usuario = Usuario.builder()
+                .id(UUID.randomUUID())
+                .nome("Rafael")
+                .email("rafael@teste.com")
+                .senha("senha-antiga-criptografada")
+                .build();
+
+        when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.encode("senha-pura-nova")).thenReturn("senha-nova-encriptada");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        usuarioService.trocarSenha(dto);
+
+        ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(captor.capture());
+
+        assertEquals("senha-nova-encriptada", captor.getValue().getSenha());
+        verify(passwordEncoder).encode("senha-pura-nova");
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoUsuarioNaoExisteAoTrocarSenha() {
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("naoexiste@teste.com", "novaSenha123");
+
+        when(usuarioRepository.findByEmail("naoexiste@teste.com")).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> usuarioService.trocarSenha(dto));
+
+        assertEquals("Usuário não encontrado com o email informado", exception.getMessage());
+        verify(usuarioRepository, never()).save(any());
+        verify(passwordEncoder, never()).encode(any());
     }
 
     @Test

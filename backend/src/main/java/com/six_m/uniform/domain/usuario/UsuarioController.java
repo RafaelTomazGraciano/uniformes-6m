@@ -2,6 +2,7 @@ package com.six_m.uniform.domain.usuario;
 
 import com.six_m.uniform.domain.usuario.dto.RequestAtualizarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
+import com.six_m.uniform.domain.usuario.dto.RequestTrocarSenhaDTO;
 import com.six_m.uniform.domain.usuario.dto.ResponseUsuarioDTO;
 import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,6 +46,18 @@ public class UsuarioController {
     public ResponseEntity<ResponseUsuarioDTO> atualizarUsuario(@Valid @RequestBody RequestAtualizarUsuarioDTO request) {
         ResponseUsuarioDTO response = usuarioService.atualizarUsuario(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @PutMapping("/trocar-senha")
+    @Operation(summary = "Trocar senha", description = "Atualiza a senha do usuário identificado pelo email informado. Não exige autenticação")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado com o email informado")
+    })
+    public ResponseEntity<MessageResponseDTO> trocarSenha(@Valid @RequestBody RequestTrocarSenhaDTO request) {
+        MessageResponseDTO response = usuarioService.trocarSenha(request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/deletar")
