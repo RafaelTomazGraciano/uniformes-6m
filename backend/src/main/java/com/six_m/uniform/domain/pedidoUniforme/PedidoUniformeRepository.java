@@ -3,6 +3,7 @@ package com.six_m.uniform.domain.pedidoUniforme;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -12,4 +13,6 @@ public interface PedidoUniformeRepository extends JpaRepository<PedidoUniforme, 
     List<PedidoUniforme> findByPedidoId(UUID pedidoId);
 
     List<PedidoUniforme> findByPedidoIdIn(Collection<UUID> pedidoIds);
+
+    List<PedidoUniforme> findByPedidoDataEfetivadaBetween(LocalDateTime inicio, LocalDateTime fim);
 }

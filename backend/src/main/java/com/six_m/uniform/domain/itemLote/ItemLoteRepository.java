@@ -3,6 +3,7 @@ package com.six_m.uniform.domain.itemLote;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -14,4 +15,6 @@ public interface ItemLoteRepository extends JpaRepository<ItemLote, UUID> {
     List<ItemLote> findByLoteId(UUID loteId);
 
     List<ItemLote> findByLoteIdIn(Collection<UUID> loteIds);
+
+    List<ItemLote> findByLoteDataEntregaBetween(LocalDateTime inicio, LocalDateTime fim);
 }

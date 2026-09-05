@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -70,6 +71,11 @@ public class ItemLoteService {
     @Transactional
     public void deletarItensPorLote(List<ItemLote> itens) {
         itemLoteRepository.deleteAll(itens);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ItemLote> buscarItensPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        return itemLoteRepository.findByLoteDataEntregaBetween(inicio, fim);
     }
 
     private ItemLote buscarItemLoteOuFalhar(UUID id) {

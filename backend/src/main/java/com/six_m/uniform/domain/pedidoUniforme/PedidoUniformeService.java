@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -69,6 +70,11 @@ public class PedidoUniformeService {
     @Transactional
     public void deletarItensPorPedido(List<PedidoUniforme> itens) {
         pedidoUniformeRepository.deleteAll(itens);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PedidoUniforme> buscarItensPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+        return pedidoUniformeRepository.findByPedidoDataEfetivadaBetween(inicio, fim);
     }
 
     private void validarItensSemDuplicidade(List<RequestItemSaidaDTO> itensDto) {

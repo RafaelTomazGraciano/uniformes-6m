@@ -1,6 +1,22 @@
 # 6M Uniformes - Backend
 
-Sistema de gestão de uniformes escolares. API REST desenvolvida em Java, responsável por autenticação, gestão de usuários, escolas, turmas, alunos, uniformes, notas fiscais e lotes de entrega.
+Sistema de gestão de uniformes escolares. API REST desenvolvida em Java, responsável por autenticação, gestão de usuários, escolas, turmas, alunos, uniformes, notas fiscais, lotes de entrega e geração de relatórios.
+
+## Sumário
+
+- [Tecnologias](#tecnologias)
+- [Como rodar o projeto](#como-rodar-o-projeto)
+- [Base URL](#base-url)
+- [Banco de dados](#banco-de-dados)
+- [Documentação da API (Swagger)](#documentação-da-api-swagger)
+- [Autenticação](#autenticação)
+- [Formato de erro](#formato-de-erro)
+- [Padrões usados no código](#padrões-usados-no-código)
+- [Testes](#testes)
+- [Rodando o Postgres isoladamente (sem o backend)](#rodando-o-postgres-isoladamente-sem-o-backend)
+- [Outros READMEs do projeto](#outros-readmes-do-projeto)
+
+---
 
 ## Tecnologias
 
@@ -10,6 +26,9 @@ Sistema de gestão de uniformes escolares. API REST desenvolvida em Java, respon
 - **Flyway** (migrações de banco)
 - **JWT** (autenticação stateless via `java-jwt`)
 - **springdoc-openapi / Swagger** (documentação interativa da API)
+- **OpenPDF** (geração de relatórios em PDF)
+- **JUnit 5 + Mockito** (testes unitários)
+- **Testcontainers** (testes de integração com Postgres real)
 - **Docker / Docker Compose**
 
 ## Como rodar o projeto
@@ -151,6 +170,42 @@ public ResponseEntity<?> criar(@RequestBody PedidoRequestDTO dto,
 
 ---
 
+## Testes
+
+O projeto tem dois níveis de teste, com propósitos diferentes.
+
+### Testes unitários
+
+Cobrem os `Service` de cada domínio (Usuário, Escola, Turma, Aluno, Uniforme, Lote, Pedido, Relatório, etc.) isoladamente, usando **Mockito** para simular os repositories e services colaboradores. Validam regras de negócio, validações e tratamento de erro sem depender de banco de dados ou rede — por isso rodam rápido e não precisam de nenhuma ferramenta externa.
+
+Rodar só os testes unitários:
+
+```bash
+./gradlew test --tests "com.six_m.uniform.domain.*"
+```
+
+### Testes de integração (Testcontainers)
+
+Cobrem o fluxo completo da API de ponta a ponta — registrar usuário, logar, criar tipo de uniforme, dar entrada em estoque via lote, criar pedido e confirmar que o estoque foi decrementado corretamente, e gerar relatórios em PDF. Usam **Testcontainers** para subir um **Postgres real em um container Docker**, exclusivo para o teste, com as migrações Flyway aplicadas do zero — garantindo que o comportamento testado é idêntico ao ambiente real (inclusive os enums nativos do Postgres, que um banco em memória não suportaria).
+
+**Pré-requisito:** Docker precisa estar instalado e em execução na máquina que for rodar esses testes.
+
+Rodar o teste de integração:
+
+```bash
+./gradlew test --tests FluxoCompletoIntegrationTest
+```
+
+Rodar todos os testes (unitários + integração):
+
+```bash
+./gradlew test
+```
+
+Uma seed de dados de teste (`src/test/resources/db/migration`) roda automaticamente apenas durante os testes, sem afetar o schema de produção — ela não é incluída no `.jar` final da aplicação.
+
+---
+
 ## Rodando o Postgres isoladamente (sem o backend)
 
 Útil para debug local:
@@ -158,3 +213,11 @@ public ResponseEntity<?> criar(@RequestBody PedidoRequestDTO dto,
 ```bash
 docker run -d --name uniform -e POSTGRES_DB=uniform -e POSTGRES_USER=uniform -e POSTGRES_PASSWORD=postgresUniform -p 5432:5432 -v uniform_data:/var/lib/postgresql postgres:18-alpine
 ```
+
+---
+
+## Outros READMEs do projeto
+
+Este README cobre apenas o **backend**. Continue lendo a documenteção do projeto.
+
+Leia a documentação do projeto: [README](./../README.md)
