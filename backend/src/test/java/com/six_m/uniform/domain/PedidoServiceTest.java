@@ -21,6 +21,7 @@ import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -203,8 +204,11 @@ public class PedidoServiceTest {
         when(pedidoUniformeService.criarItensParaPedido(pedidoExistente, dto.itens())).thenReturn(List.of(itemNovo));
         when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ResponsePedidoDTO response = pedidoService.atualizarPedido(pedidoId, dto);
+        ResponsePedidoDTO response = pedidoService.atualizarPedido(pedidoId, dto, usuario);
 
+        ArgumentCaptor<Pedido> captor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).save(captor.capture());
+        assertEquals(usuario, captor.getValue().getUsuario());
         verify(uniformeService).estornarSaida(uniformeAntigoId, 4);
         verify(pedidoUniformeService).deletarItensPorPedido(List.of(itemAntigo));
         verify(uniformeService).darSaida(uniformeNovoId, 2);
@@ -218,7 +222,7 @@ public class PedidoServiceTest {
 
         when(pedidoRepository.findById(pedidoId)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> pedidoService.atualizarPedido(pedidoId, dto));
+        assertThrows(NotFoundException.class, () -> pedidoService.atualizarPedido(pedidoId, dto, Usuario.builder().build()));
         verify(alunoRepository, never()).findById(any());
         verify(pedidoUniformeService, never()).buscarItensPorPedido(any());
     }

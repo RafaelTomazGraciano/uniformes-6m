@@ -69,7 +69,7 @@ public class PedidoService {
     }
 
     @Transactional
-    public ResponsePedidoDTO atualizarPedido(UUID id, RequestAtualizarPedidoDTO dto) {
+    public ResponsePedidoDTO atualizarPedido(UUID id, RequestAtualizarPedidoDTO dto, Usuario usuarioQueEditou) {
         Pedido pedido = buscarPedidoOuFalhar(id);
         Aluno aluno = buscarAlunoOuFalhar(dto.alunoId());
 
@@ -86,6 +86,7 @@ public class PedidoService {
 
         pedido.setAluno(aluno);
         pedido.setDataEfetivada(dto.dataEfetivada());
+        pedido.setUsuario(usuarioQueEditou);
         pedido = pedidoRepository.save(pedido);
 
         return toResponseDTO(pedido, itensNovos);

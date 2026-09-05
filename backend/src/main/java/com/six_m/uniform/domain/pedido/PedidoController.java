@@ -70,7 +70,7 @@ public class PedidoController {
     }
 
     @PutMapping("{id}")
-    @Operation(summary = "Atualizar pedido", description = "Substitui os itens do pedido: devolve ao estoque a quantidade dos itens antigos e decrementa a dos novos")
+    @Operation(summary = "Atualizar pedido", description = "Substitui os itens do pedido: devolve ao estoque a quantidade dos itens antigos e decrementa a dos novos. O usuário que realizou a edição fica registrado no pedido")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Pedido atualizado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Dados inválidos, item duplicado no pedido, ou quantidade solicitada maior que o estoque disponível"),
@@ -79,7 +79,8 @@ public class PedidoController {
     })
     public ResponseEntity<ResponsePedidoDTO> atualizarPedido(
             @Parameter(description = "Identificador do pedido") @PathVariable UUID id,
-            @Valid @RequestBody RequestAtualizarPedidoDTO request) {
-        return ResponseEntity.ok(pedidoService.atualizarPedido(id, request));
+            @Valid @RequestBody RequestAtualizarPedidoDTO request,
+            @AuthenticationPrincipal(expression = "usuario") Usuario usuario) {
+        return ResponseEntity.ok(pedidoService.atualizarPedido(id, request, usuario));
     }
 }
