@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -182,5 +183,31 @@ public class PedidoUniformeServiceTest {
         pedidoUniformeService.deletarItensPorPedido(List.of(item1, item2));
 
         verify(pedidoUniformeRepository).deleteAll(List.of(item1, item2));
+    }
+
+    @Test
+    void deveBuscarItensPorPeriodo() {
+        LocalDateTime inicio = LocalDateTime.of(2026, 1, 1, 0, 0);
+        LocalDateTime fim = LocalDateTime.of(2026, 12, 31, 23, 59, 59);
+        PedidoUniforme item = PedidoUniforme.builder().id(UUID.randomUUID()).build();
+
+        when(pedidoUniformeRepository.findByPedidoDataEfetivadaBetween(inicio, fim)).thenReturn(List.of(item));
+
+        List<PedidoUniforme> resultado = pedidoUniformeService.buscarItensPorPeriodo(inicio, fim);
+
+        assertEquals(1, resultado.size());
+        verify(pedidoUniformeRepository).findByPedidoDataEfetivadaBetween(inicio, fim);
+    }
+
+    @Test
+    void deveRetornarListaVaziaQuandoNaoHaItensNoPeriodo() {
+        LocalDateTime inicio = LocalDateTime.of(2026, 1, 1, 0, 0);
+        LocalDateTime fim = LocalDateTime.of(2026, 12, 31, 23, 59, 59);
+
+        when(pedidoUniformeRepository.findByPedidoDataEfetivadaBetween(inicio, fim)).thenReturn(List.of());
+
+        List<PedidoUniforme> resultado = pedidoUniformeService.buscarItensPorPeriodo(inicio, fim);
+
+        assertTrue(resultado.isEmpty());
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -82,6 +83,11 @@ public class UniformeService {
     public Uniforme buscarUniformeEntidade(UUID id) {
         return uniformeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Uniforme não encontrado com o ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Uniforme> buscarTodosUniformesEntidades() {
+        return uniformeRepository.findAll();
     }
 
     private ResponseUniformeDTO toResponseDTO(Uniforme uniforme) {

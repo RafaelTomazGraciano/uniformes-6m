@@ -209,4 +209,28 @@ public class UniformeServiceTest {
         assertThrows(NotFoundException.class, () -> uniformeService.estornarSaida(uniformeId, 5));
         verify(uniformeRepository, never()).save(any());
     }
+
+    @Test
+    void deveBuscarTodosUniformesEntidades() {
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        Uniforme uniforme1 = Uniforme.builder().id(UUID.randomUUID()).tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(10).build();
+        Uniforme uniforme2 = Uniforme.builder().id(UUID.randomUUID()).tipoUniforme(tipo).tamanho(Tamanho.G).sexo(Sexo.FEMININO).quantidade(5).build();
+
+        when(uniformeRepository.findAll()).thenReturn(List.of(uniforme1, uniforme2));
+
+        List<Uniforme> resultado = uniformeService.buscarTodosUniformesEntidades();
+
+        assertEquals(2, resultado.size());
+        assertTrue(resultado.contains(uniforme1));
+        assertTrue(resultado.contains(uniforme2));
+    }
+
+    @Test
+    void deveRetornarListaVaziaQuandoNaoHaUniformesCadastrados() {
+        when(uniformeRepository.findAll()).thenReturn(List.of());
+
+        List<Uniforme> resultado = uniformeService.buscarTodosUniformesEntidades();
+
+        assertTrue(resultado.isEmpty());
+    }
 }

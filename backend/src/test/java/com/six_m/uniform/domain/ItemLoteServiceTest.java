@@ -21,6 +21,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -177,5 +178,31 @@ public class ItemLoteServiceTest {
         itemLoteService.deletarItensPorLote(List.of(item1, item2));
 
         verify(itemLoteRepository).deleteAll(List.of(item1, item2));
+    }
+
+    @Test
+    void deveBuscarItensPorPeriodo() {
+        LocalDateTime inicio = LocalDateTime.of(2026, 3, 1, 0, 0);
+        LocalDateTime fim = LocalDateTime.of(2026, 3, 31, 23, 59, 59);
+        ItemLote item = ItemLote.builder().id(UUID.randomUUID()).build();
+
+        when(itemLoteRepository.findByLoteDataEntregaBetween(inicio, fim)).thenReturn(List.of(item));
+
+        List<ItemLote> resultado = itemLoteService.buscarItensPorPeriodo(inicio, fim);
+
+        assertEquals(1, resultado.size());
+        verify(itemLoteRepository).findByLoteDataEntregaBetween(inicio, fim);
+    }
+
+    @Test
+    void deveRetornarListaVaziaQuandoNaoHaItensNoPeriodo() {
+        LocalDateTime inicio = LocalDateTime.of(2026, 3, 1, 0, 0);
+        LocalDateTime fim = LocalDateTime.of(2026, 3, 31, 23, 59, 59);
+
+        when(itemLoteRepository.findByLoteDataEntregaBetween(inicio, fim)).thenReturn(List.of());
+
+        List<ItemLote> resultado = itemLoteService.buscarItensPorPeriodo(inicio, fim);
+
+        assertTrue(resultado.isEmpty());
     }
 }

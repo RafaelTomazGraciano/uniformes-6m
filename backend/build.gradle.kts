@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("com.auth0:java-jwt:4.5.2")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
+	implementation("com.github.librepdf:openpdf:2.0.3")
 	implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))
 	developmentOnly(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))
 	developmentOnly("me.paulschwarz:springboot4-dotenv")
@@ -37,6 +38,12 @@ dependencies {
 	testCompileOnly("org.projectlombok:lombok")
 	testAnnotationProcessor("org.projectlombok:lombok")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation("org.testcontainers:junit-jupiter")
+	testImplementation("org.testcontainers:postgresql")
+	testImplementation("org.springframework.boot:spring-boot-resttestclient")
+	testRuntimeOnly("org.springframework.boot:spring-boot-restclient")
 }
 
 tasks.withType<Test> {
