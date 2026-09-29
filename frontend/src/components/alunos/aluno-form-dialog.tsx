@@ -78,13 +78,13 @@ export function AlunoFormDialog({ open, onOpenChange, aluno }: AlunoFormDialogPr
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="nome">Nome</Label>
             <Input id="nome" placeholder="Nome do aluno" {...register('nome')} aria-invalid={Boolean(errors.nome)} />
             {errors.nome && <p className="text-sm text-destructive">{errors.nome.message}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="turmaId">Turma</Label>
             <Controller
               control={control}

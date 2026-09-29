@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { Eye } from 'lucide-react'
+import { Eye, Plus } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 
 import { AppLayout } from '@/components/layout/app-layout'
+import { NovaEntregaDialog } from '@/components/pedidos/nova-entrega-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,11 +19,36 @@ function formatDataEfetivada(value: string) {
 export function PedidosPage() {
   const [page, setPage] = useState(0)
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { data, isLoading, isError } = usePedidosQuery({ page })
 
+  // ?nova=1 abre o diálogo: o botão da visão geral continua levando direto ao formulário.
+  const novaEntregaAberta = searchParams.get('nova') === '1'
+
+  function definirNovaEntregaAberta(aberta: boolean) {
+    setSearchParams(
+      (atual) => {
+        const proximos = new URLSearchParams(atual)
+        if (aberta) proximos.set('nova', '1')
+        else proximos.delete('nova')
+        return proximos
+      },
+      { replace: true },
+    )
+  }
+
   return (
-    <AppLayout title="Pedidos">
+    <AppLayout
+      title="Entregas"
+      description="Todo uniforme que saiu do almoxarifado, do mais recente ao mais antigo."
+      headerActions={
+        <Button onClick={() => definirNovaEntregaAberta(true)}>
+          <Plus className="size-4" />
+          Nova entrega
+        </Button>
+      }
+    >
       <div className="rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
@@ -53,8 +80,8 @@ export function PedidosPage() {
 
             {!isLoading && !isError && data?.content.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  Nenhuma entrega registrada.
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhuma entrega registrada ainda.
                 </TableCell>
               </TableRow>
             )}
@@ -92,6 +119,8 @@ export function PedidosPage() {
           </div>
         </div>
       )}
+
+      <NovaEntregaDialog open={novaEntregaAberta} onOpenChange={definirNovaEntregaAberta} />
 
       <Dialog open={Boolean(selectedPedido)} onOpenChange={(open) => !open && setSelectedPedido(null)}>
         <DialogContent>

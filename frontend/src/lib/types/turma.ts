@@ -7,3 +7,11 @@ export type Turma = {
   turno: Turno
   ensino: Ensino
 }
+
+export type CriarTurmaPayload = {
+  nome: string
+  turno: Turno
+  ensino: Ensino
+}
+
+export type AtualizarTurmaPayload = CriarTurmaPayload

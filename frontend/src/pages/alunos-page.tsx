@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { AlunoFormDialog } from '@/components/alunos/aluno-form-dialog'
+import { AlunosFiltros, TODAS_AS_TURMAS } from '@/components/alunos/alunos-filtros'
 import { AppLayout } from '@/components/layout/app-layout'
 import {
   AlertDialog,
@@ -17,17 +18,43 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useAlunosQuery, useDeleteAlunoMutation } from '@/hooks/use-alunos'
+import { useAllAlunosQuery, useDeleteAlunoMutation } from '@/hooks/use-alunos'
+import { filtrarAluno } from '@/lib/alunos'
 import type { Aluno } from '@/lib/types/aluno'
+
+const POR_PAGINA = 10
 
 export function AlunosPage() {
   const [page, setPage] = useState(0)
+  const [busca, setBusca] = useState('')
+  const [turmaId, setTurmaId] = useState(TODAS_AS_TURMAS)
   const [formOpen, setFormOpen] = useState(false)
   const [editingAluno, setEditingAluno] = useState<Aluno | undefined>(undefined)
   const [deletingAluno, setDeletingAluno] = useState<Aluno | null>(null)
 
-  const { data, isLoading, isError } = useAlunosQuery({ page, sort: 'nome,asc' })
+  /* A busca é feita no cliente sobre a lista completa: o endpoint de alunos não
+     aceita filtro, e paginar no servidor buscaria só dentro da página visível. */
+  const { data: alunos, isLoading, isError } = useAllAlunosQuery()
   const deleteMutation = useDeleteAlunoMutation()
+
+  const filtrados = useMemo(() => {
+    return (alunos ?? []).filter(
+      (aluno) => filtrarAluno(aluno, busca) && (turmaId === TODAS_AS_TURMAS || aluno.turmaId === turmaId),
+    )
+  }, [alunos, busca, turmaId])
+
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
+  /* Filtrar encolhe a lista e pode deixar `page` além do fim; ancorar no total
+     evita a tela em branco sem precisar sincronizar estado num efeito. */
+  const paginaAtual = Math.min(page, totalPages - 1)
+  const visiveis = filtrados.slice(paginaAtual * POR_PAGINA, paginaAtual * POR_PAGINA + POR_PAGINA)
+
+  const temFiltro = busca.trim() !== '' || turmaId !== TODAS_AS_TURMAS
+
+  function filtrar(aplicar: () => void) {
+    aplicar()
+    setPage(0)
+  }
 
   const openCreateDialog = () => {
     setEditingAluno(undefined)
@@ -54,6 +81,7 @@ export function AlunosPage() {
   return (
     <AppLayout
       title="Alunos"
+      description="Quem pode receber uniformes, por turma."
       headerActions={
         <Button onClick={openCreateDialog}>
           <Plus className="size-4" />
@@ -61,6 +89,13 @@ export function AlunosPage() {
         </Button>
       }
     >
+      <AlunosFiltros
+        busca={busca}
+        onBuscaChange={(valor) => filtrar(() => setBusca(valor))}
+        turmaId={turmaId}
+        onTurmaChange={(valor) => filtrar(() => setTurmaId(valor))}
+      />
+
       <div className="rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
@@ -88,27 +123,29 @@ export function AlunosPage() {
               </TableRow>
             )}
 
-            {!isLoading && !isError && data?.content.length === 0 && (
+            {!isLoading && !isError && filtrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground">
-                  Nenhum aluno cadastrado.
+                <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
+                  {temFiltro
+                    ? 'Nenhum aluno encontrado para esta busca. Verifique a grafia ou limpe os filtros.'
+                    : 'Nenhum aluno cadastrado ainda. Comece criando o primeiro.'}
                 </TableCell>
               </TableRow>
             )}
 
-            {data?.content.map((aluno) => (
+            {visiveis.map((aluno) => (
               <TableRow key={aluno.id}>
-                <TableCell>{aluno.nome}</TableCell>
+                <TableCell className="font-medium">{aluno.nome}</TableCell>
                 <TableCell>{aluno.turmaNome}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button variant="ghost" size="icon-sm" onClick={() => openEditDialog(aluno)}>
                       <Pencil className="size-4" />
-                      <span className="sr-only">Editar</span>
+                      <span className="sr-only">Editar {aluno.nome}</span>
                     </Button>
                     <Button variant="ghost" size="icon-sm" onClick={() => setDeletingAluno(aluno)}>
                       <Trash2 className="size-4" />
-                      <span className="sr-only">Excluir</span>
+                      <span className="sr-only">Excluir {aluno.nome}</span>
                     </Button>
                   </div>
                 </TableCell>
@@ -118,19 +155,27 @@ export function AlunosPage() {
         </Table>
       </div>
 
-      {data && data.totalPages > 1 && (
+      {filtrados.length > 0 && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Página {data.number + 1} de {data.totalPages}
+            {filtrados.length} {filtrados.length === 1 ? 'aluno' : 'alunos'}
+            {totalPages > 1 && ` · página ${paginaAtual + 1} de ${totalPages}`}
           </span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={data.first} onClick={() => setPage((p) => p - 1)}>
-              Anterior
-            </Button>
-            <Button variant="outline" size="sm" disabled={data.last} onClick={() => setPage((p) => p + 1)}>
-              Próxima
-            </Button>
-          </div>
+          {totalPages > 1 && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={paginaAtual === 0} onClick={() => setPage(paginaAtual - 1)}>
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={paginaAtual >= totalPages - 1}
+                onClick={() => setPage(paginaAtual + 1)}
+              >
+                Próxima
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
