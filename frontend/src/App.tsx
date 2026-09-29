@@ -4,9 +4,13 @@ import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AlunosPage } from '@/pages/alunos-page'
 import { DashboardPage } from '@/pages/dashboard-page'
+import { EstoquePage } from '@/pages/estoque-page'
 import { LoginPage } from '@/pages/login-page'
 import { NotFoundPage } from '@/pages/not-found-page'
+import { NovaEntregaPage } from '@/pages/nova-entrega-page'
+import { PedidosPage } from '@/pages/pedidos-page'
 import { RegisterPage } from '@/pages/register-page'
 
 const queryClient = new QueryClient({
@@ -39,6 +43,42 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <DashboardPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: '/alunos',
+    element: (
+      <ProtectedRoute>
+        <AlunosPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: '/pedidos',
+    element: (
+      <ProtectedRoute>
+        <PedidosPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: '/requisicoes/nova',
+    element: (
+      <ProtectedRoute>
+        <NovaEntregaPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <NotFoundPage />,
+  },
+  {
+    path: '/estoque',
+    element: (
+      <ProtectedRoute>
+        <EstoquePage />
       </ProtectedRoute>
     ),
     errorElement: <NotFoundPage />,
