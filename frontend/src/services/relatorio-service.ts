@@ -1,7 +1,7 @@
 import { apiFetchBlob } from '@/lib/api-client'
 import type { PeriodoFormValues } from '@/lib/schemas/relatorio'
 
-export type RelatorioComPeriodo = 'entrada' | 'saida' | 'transacoes'
+export type RelatorioComPeriodo = 'entrada' | 'saida' | 'transacoes' | 'entregas-turma'
 
 function periodoParaQuery(periodo: PeriodoFormValues): string {
   const params = new URLSearchParams({ tipo: periodo.tipo, anoInicio: String(periodo.anoInicio) })
@@ -22,8 +22,14 @@ export function baixarRelatorioEstoque(): Promise<Blob> {
   return apiFetchBlob('/relatorio/estoque')
 }
 
-export function baixarRelatorioComPeriodo(relatorio: RelatorioComPeriodo, periodo: PeriodoFormValues): Promise<Blob> {
-  return apiFetchBlob(`/relatorio/${relatorio}?${periodoParaQuery(periodo)}`)
+export function baixarRelatorioComPeriodo(
+  relatorio: RelatorioComPeriodo,
+  periodo: PeriodoFormValues,
+  /** Só o relatório de entregas usa. Sem id, o backend devolve todas as turmas. */
+  turmaId?: string,
+): Promise<Blob> {
+  const query = periodoParaQuery(periodo)
+  return apiFetchBlob(`/relatorio/${relatorio}?${turmaId ? `${query}&turmaId=${turmaId}` : query}`)
 }
 
 export function salvarArquivo(blob: Blob, nomeArquivo: string) {

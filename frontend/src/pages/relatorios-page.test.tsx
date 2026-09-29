@@ -1,8 +1,9 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/services/relatorio-service')
+vi.mock('@/services/turma-service')
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }))
@@ -10,17 +11,25 @@ vi.mock('sonner', () => ({
 import { ApiError } from '@/lib/api-client'
 import { RelatoriosPage } from '@/pages/relatorios-page'
 import * as relatorioService from '@/services/relatorio-service'
+import * as turmaService from '@/services/turma-service'
 import { renderWithProviders } from '@/test/render'
 import { toast } from 'sonner'
 
 const pdf = new Blob(['%PDF'], { type: 'application/pdf' })
 
-function cardBotao(titulo: string) {
-  /* Cada card tem um "Baixar PDF"; ancorar no título evita pegar o do vizinho.
-     Pelo heading, e não pelo texto: "Estoque" também é um item do menu. */
+const turmaA = { id: 't1', nome: '9º Ano A', turno: 'DIURNO' as const, ensino: 'FUNDAMENTAL' as const }
+const turmaB = { id: 't2', nome: '6º Ano B', turno: 'VESPERTINO' as const, ensino: 'FUNDAMENTAL' as const }
+
+function cardDe(titulo: string) {
+  /* Ancorar no título evita pegar o card vizinho. Pelo heading, e não pelo
+     texto: "Estoque" também é um item do menu. */
   const cabecalho = screen.getByRole('heading', { name: titulo })
-  const card = cabecalho.closest('[data-slot="card"]') as HTMLElement
-  return card.querySelector('button') as HTMLButtonElement
+  return cabecalho.closest('[data-slot="card"]') as HTMLElement
+}
+
+function cardBotao(titulo: string) {
+  // Pelo nome, não pelo primeiro button: o card de turma tem um select antes.
+  return within(cardDe(titulo)).getByRole('button', { name: /baixar pdf|gerando/i })
 }
 
 describe('RelatoriosPage', () => {
@@ -28,6 +37,7 @@ describe('RelatoriosPage', () => {
     vi.resetAllMocks()
     vi.mocked(relatorioService.baixarRelatorioEstoque).mockResolvedValue(pdf)
     vi.mocked(relatorioService.baixarRelatorioComPeriodo).mockResolvedValue(pdf)
+    vi.mocked(turmaService.listAllTurmas).mockResolvedValue([turmaA, turmaB])
   })
 
   it('baixa o relatório de estoque sem exigir período', async () => {
@@ -67,6 +77,36 @@ describe('RelatoriosPage', () => {
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith('Não há registros de saída no período informado'))
     expect(toast.error).not.toHaveBeenCalled()
     expect(relatorioService.salvarArquivo).not.toHaveBeenCalled()
+  })
+
+  it('baixa as entregas de todas as turmas quando nenhuma é escolhida', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<RelatoriosPage />)
+
+    await user.click(cardBotao('Entregas por turma'))
+
+    await waitFor(() => expect(relatorioService.baixarRelatorioComPeriodo).toHaveBeenCalled())
+
+    const [relatorio, , turmaId] = vi.mocked(relatorioService.baixarRelatorioComPeriodo).mock.calls[0]
+    expect(relatorio).toBe('entregas-turma')
+    expect(turmaId).toBeUndefined()
+    expect(relatorioService.salvarArquivo).toHaveBeenCalledWith(pdf, 'relatorio-entregas-turma.pdf')
+  })
+
+  it('restringe as entregas à turma escolhida', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<RelatoriosPage />)
+
+    await user.click(await screen.findByLabelText('Turma'))
+    await user.click(await screen.findByRole('option', { name: /6º Ano B/ }))
+    await user.click(cardBotao('Entregas por turma'))
+
+    await waitFor(() => expect(relatorioService.baixarRelatorioComPeriodo).toHaveBeenCalled())
+
+    const [relatorio, periodo, turmaId] = vi.mocked(relatorioService.baixarRelatorioComPeriodo).mock.calls[0]
+    expect(relatorio).toBe('entregas-turma')
+    expect(turmaId).toBe('t2')
+    expect(periodo.anoInicio).toBe(new Date().getFullYear())
   })
 
   it('exige o mês inicial quando o filtro é mensal', async () => {

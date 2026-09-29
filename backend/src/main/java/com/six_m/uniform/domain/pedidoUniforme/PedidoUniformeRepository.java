@@ -15,4 +15,6 @@ public interface PedidoUniformeRepository extends JpaRepository<PedidoUniforme, 
     List<PedidoUniforme> findByPedidoIdIn(Collection<UUID> pedidoIds);
 
     List<PedidoUniforme> findByPedidoDataEfetivadaBetween(LocalDateTime inicio, LocalDateTime fim);
+
+    List<PedidoUniforme> findByPedidoDataEfetivadaBetweenAndPedidoAlunoTurmaId(LocalDateTime inicio, LocalDateTime fim, UUID turmaId);
 }

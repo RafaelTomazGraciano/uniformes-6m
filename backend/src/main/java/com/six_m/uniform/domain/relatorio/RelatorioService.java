@@ -15,7 +15,10 @@ import org.springframework.stereotype.Service;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +117,70 @@ public class RelatorioService {
                 linhas,
                 List.of("Total de saídas: " + totalSaida + " unidades")
         );
+    }
+
+    public byte[] gerarRelatorioEntregasPorTurma(RelatorioFiltroDTO filtro, UUID turmaId) {
+        Periodo periodo = periodoResolver.resolver(filtro);
+
+        List<PedidoUniforme> itens = turmaId == null
+                ? pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())
+                : pedidoUniformeService.buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId);
+
+        if (itens.isEmpty()) {
+            throw new NotFoundException("Não há entregas de uniformes para a turma no período informado");
+        }
+
+        /* Turma, depois aluno, depois data: é como a secretaria confere a lista,
+           varrendo uma turma inteira antes de passar para a próxima. */
+        List<PedidoUniforme> ordenados = itens.stream()
+                .sorted(Comparator.comparing(this::nomeDaTurma)
+                        .thenComparing(i -> i.getPedido().getAluno().getNome())
+                        .thenComparing(i -> i.getPedido().getDataEfetivada()))
+                .toList();
+
+        List<List<String>> linhas = ordenados.stream()
+                .map(i -> List.of(
+                        nomeDaTurma(i),
+                        i.getPedido().getAluno().getNome(),
+                        i.getPedido().getDataEfetivada().format(FORMATO_DATA),
+                        i.getUniforme().getTipoUniforme().getTipo(),
+                        i.getUniforme().getTamanho().name(),
+                        i.getUniforme().getSexo().name(),
+                        String.valueOf(i.getQuantidade())
+                ))
+                .toList();
+
+        return pdfTableBuilder.gerarPdf(
+                "Relatório de Entregas por Turma",
+                descricaoPeriodo(periodo),
+                List.of("Turma", "Aluno", "Data", "Tipo", "Tamanho", "Sexo", "Quantidade"),
+                linhas,
+                totaisPorTurma(ordenados)
+        );
+    }
+
+    /* O PDF é uma tabela plana, então o fechamento por turma vai no rodapé:
+       é o número que a coordenação lê primeiro. */
+    private List<String> totaisPorTurma(List<PedidoUniforme> itens) {
+        Map<String, Integer> porTurma = new LinkedHashMap<>();
+
+        for (PedidoUniforme item : itens) {
+            porTurma.merge(nomeDaTurma(item), item.getQuantidade(), Integer::sum);
+        }
+
+        List<String> totais = new ArrayList<>();
+        for (Map.Entry<String, Integer> entrada : porTurma.entrySet()) {
+            totais.add(entrada.getKey() + ": " + entrada.getValue() + " unidades");
+        }
+
+        int totalGeral = itens.stream().mapToInt(PedidoUniforme::getQuantidade).sum();
+        totais.add("Total de entregas: " + totalGeral + " unidades");
+
+        return totais;
+    }
+
+    private String nomeDaTurma(PedidoUniforme item) {
+        return item.getPedido().getAluno().getTurma().getNome();
     }
 
     public byte[] gerarRelatorioTransacoes(RelatorioFiltroDTO filtro) {

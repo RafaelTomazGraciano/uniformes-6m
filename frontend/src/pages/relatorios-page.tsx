@@ -8,7 +8,11 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { FiltroPeriodo } from '@/components/relatorios/filtro-periodo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useTurmasQuery } from '@/hooks/use-turmas'
 import { ApiError } from '@/lib/api-client'
+import { turnoLabels } from '@/lib/labels'
 import { periodoSchema, type PeriodoFormValues } from '@/lib/schemas/relatorio'
 import {
   baixarRelatorioComPeriodo,
@@ -17,11 +21,16 @@ import {
   type RelatorioComPeriodo,
 } from '@/services/relatorio-service'
 
+/* O Select não distingue "sem valor" de "valor vazio", então a opção de não
+   filtrar precisa de um valor próprio. */
+const TODAS_AS_TURMAS = 'todas'
+
 type Relatorio = {
   chave: RelatorioComPeriodo | 'estoque'
   titulo: string
   descricao: string
   usaPeriodo: boolean
+  usaTurma?: boolean
 }
 
 const RELATORIOS: Relatorio[] = [
@@ -44,6 +53,13 @@ const RELATORIOS: Relatorio[] = [
     usaPeriodo: true,
   },
   {
+    chave: 'entregas-turma',
+    titulo: 'Entregas por turma',
+    descricao: 'Quem recebeu o quê, turma a turma, com o subtotal de cada uma.',
+    usaPeriodo: true,
+    usaTurma: true,
+  },
+  {
     chave: 'transacoes',
     titulo: 'Transações',
     descricao: 'Entradas e saídas lado a lado, com o saldo do período.',
@@ -53,6 +69,9 @@ const RELATORIOS: Relatorio[] = [
 
 export function RelatoriosPage() {
   const [baixando, setBaixando] = useState<string | null>(null)
+  const [turmaId, setTurmaId] = useState(TODAS_AS_TURMAS)
+
+  const { data: turmas, isLoading: carregandoTurmas } = useTurmasQuery()
 
   const form = useForm<PeriodoFormValues>({
     resolver: zodResolver(periodoSchema),
@@ -67,10 +86,11 @@ export function RelatoriosPage() {
     setBaixando(relatorio.chave)
 
     try {
+      const turma = relatorio.usaTurma && turmaId !== TODAS_AS_TURMAS ? turmaId : undefined
       const blob =
         relatorio.chave === 'estoque'
           ? await baixarRelatorioEstoque()
-          : await baixarRelatorioComPeriodo(relatorio.chave, periodo!)
+          : await baixarRelatorioComPeriodo(relatorio.chave, periodo!, turma)
 
       salvarArquivo(blob, `relatorio-${relatorio.chave}.pdf`)
       toast.success(`Relatório de ${relatorio.titulo.toLowerCase()} baixado.`)
@@ -111,7 +131,27 @@ export function RelatoriosPage() {
                 <CardDescription>{relatorio.descricao}</CardDescription>
               </CardHeader>
 
-              <CardContent className="mt-auto pb-6">
+              <CardContent className="mt-auto space-y-4 pb-6">
+                {/* A turma é do relatório de entregas, não do período: fica dentro do card. */}
+                {relatorio.usaTurma && (
+                  <div className="flex max-w-xs flex-col gap-2">
+                    <Label htmlFor="turma-relatorio">Turma</Label>
+                    <Select value={turmaId} onValueChange={(valor) => setTurmaId(valor ?? TODAS_AS_TURMAS)}>
+                      <SelectTrigger id="turma-relatorio" className="w-full">
+                        <SelectValue placeholder={carregandoTurmas ? 'Carregando turmas...' : 'Todas as turmas'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={TODAS_AS_TURMAS}>Todas as turmas</SelectItem>
+                        {turmas?.map((turma) => (
+                          <SelectItem key={turma.id} value={turma.id}>
+                            {turma.nome} — {turnoLabels[turma.turno]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <Button
                   variant={relatorio.usaPeriodo ? 'default' : 'outline'}
                   disabled={baixando !== null}

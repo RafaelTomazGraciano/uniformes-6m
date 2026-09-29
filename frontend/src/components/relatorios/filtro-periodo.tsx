@@ -42,7 +42,7 @@ export function FiltroPeriodo({ form }: { form: UseFormReturn<PeriodoFormValues>
       <CardHeader>
         <CardTitle>Período</CardTitle>
         <CardDescription>
-          Vale para entrada, saída e transações. Deixe o fim em branco para um mês ou ano único.
+          Vale para todos os relatórios menos o de estoque. Deixe o fim em branco para um mês ou ano único.
         </CardDescription>
       </CardHeader>
 

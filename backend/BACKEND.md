@@ -218,6 +218,7 @@ docker run -d --name uniform -e POSTGRES_DB=uniform -e POSTGRES_USER=uniform -e 
 
 ## Outros READMEs do projeto
 
-Este README cobre apenas o **backend**. Continue lendo a documenteção do projeto.
+Este README cobre apenas o **backend**. Continue lendo a documentação do projeto:
 
-Leia a documentação do projeto: [README](./../README.md)
+- [README do projeto](./../README.md)
+- [Documentação do frontend](./../frontend/README.md)
