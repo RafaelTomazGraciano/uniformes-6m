@@ -77,6 +77,11 @@ public class PedidoUniformeService {
         return pedidoUniformeRepository.findByPedidoDataEfetivadaBetween(inicio, fim);
     }
 
+    @Transactional(readOnly = true)
+    public List<PedidoUniforme> buscarItensPorPeriodoETurma(LocalDateTime inicio, LocalDateTime fim, UUID turmaId) {
+        return pedidoUniformeRepository.findByPedidoDataEfetivadaBetweenAndPedidoAlunoTurmaId(inicio, fim, turmaId);
+    }
+
     private void validarItensSemDuplicidade(List<RequestItemSaidaDTO> itensDto) {
         Set<UUID> uniformesVistos = new HashSet<>();
         for (RequestItemSaidaDTO item : itensDto) {

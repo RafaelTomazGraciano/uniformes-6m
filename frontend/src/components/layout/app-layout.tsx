@@ -1,36 +1,40 @@
 import type { ReactNode } from 'react'
 
 import { AppSidebar } from '@/components/app-sidebar'
-import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { useAuth } from '@/hooks/use-auth'
 
 type AppLayoutProps = {
   title: string
+  description?: string
   headerActions?: ReactNode
   children: ReactNode
 }
 
-export function AppLayout({ title, headerActions, children }: AppLayoutProps) {
-  const { session, logout } = useAuth()
-
+export function AppLayout({ title, description, headerActions, children }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 items-center gap-3 border-b border-border px-4">
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-sm">
           <SidebarTrigger />
-          <h1 className="text-sm font-semibold text-foreground">{title}</h1>
-          <div className="ml-auto flex items-center gap-3">
-            {headerActions}
-            <span className="text-sm text-muted-foreground">{session?.user.email}</span>
-            <Button variant="outline" onClick={logout}>
-              Sair
-            </Button>
+          <span className="text-sm font-semibold md:hidden">Uniformes 6M</span>
+          <div className="ml-auto">
+            <ThemeToggle />
           </div>
         </header>
 
-        <main className="m-4">{children}</main>
+        <main className="mx-auto w-full max-w-[88rem] px-4 py-6 md:px-6 md:py-8">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+            </div>
+            {headerActions && <div className="flex items-center gap-2">{headerActions}</div>}
+          </div>
+
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )

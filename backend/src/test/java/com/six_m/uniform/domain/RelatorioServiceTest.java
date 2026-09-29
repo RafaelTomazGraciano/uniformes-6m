@@ -12,6 +12,7 @@ import com.six_m.uniform.domain.relatorio.RelatorioPeriodoResolver;
 import com.six_m.uniform.domain.relatorio.RelatorioService;
 import com.six_m.uniform.domain.relatorio.dto.RelatorioFiltroDTO;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
+import com.six_m.uniform.domain.turma.Turma;
 import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeService;
 import com.six_m.uniform.exception.NotFoundException;
@@ -153,6 +154,79 @@ public class RelatorioServiceTest {
                 () -> relatorioService.gerarRelatorioSaida(filtro));
 
         verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void deveAgruparEntregasPorTurmaComSubtotalDeCadaUma() {
+        RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.ANO, 2026, null, null, null);
+        Periodo periodo = new Periodo(LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2026, 12, 31, 23, 59, 59));
+
+        // Fora de ordem de propósito: o relatório é que precisa agrupar.
+        PedidoUniforme itemB = entregaDe("6º B", "Ana", 3, LocalDateTime.of(2026, 5, 10, 9, 0));
+        PedidoUniforme itemA1 = entregaDe("6º A", "Carlos", 2, LocalDateTime.of(2026, 5, 11, 9, 0));
+        PedidoUniforme itemA2 = entregaDe("6º A", "Bruna", 4, LocalDateTime.of(2026, 5, 12, 9, 0));
+
+        when(periodoResolver.resolver(filtro)).thenReturn(periodo);
+        when(pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim()))
+                .thenReturn(List.of(itemB, itemA1, itemA2));
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
+
+        byte[] resultado = relatorioService.gerarRelatorioEntregasPorTurma(filtro, null);
+
+        assertNotNull(resultado);
+        ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
+        verify(pdfTableBuilder).gerarPdf(eq("Relatório de Entregas por Turma"), any(),
+                eq(List.of("Turma", "Aluno", "Data", "Tipo", "Tamanho", "Sexo", "Quantidade")),
+                linhasCaptor.capture(),
+                eq(List.of("6º A: 6 unidades", "6º B: 3 unidades", "Total de entregas: 9 unidades")));
+
+        List<List<String>> linhas = linhasCaptor.getValue();
+        assertEquals(List.of("6º A", "Bruna"), linhas.get(0).subList(0, 2));
+        assertEquals(List.of("6º A", "Carlos"), linhas.get(1).subList(0, 2));
+        assertEquals(List.of("6º B", "Ana"), linhas.get(2).subList(0, 2));
+    }
+
+    @Test
+    void deveConsultarApenasUmaTurmaQuandoTurmaIdEInformado() {
+        RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.ANO, 2026, null, null, null);
+        Periodo periodo = new Periodo(LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2026, 12, 31, 23, 59, 59));
+        java.util.UUID turmaId = java.util.UUID.randomUUID();
+
+        when(periodoResolver.resolver(filtro)).thenReturn(periodo);
+        when(pedidoUniformeService.buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId))
+                .thenReturn(List.of(entregaDe("6º A", "Bruna", 4, LocalDateTime.of(2026, 5, 12, 9, 0))));
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
+
+        relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId);
+
+        verify(pedidoUniformeService).buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId);
+        verify(pedidoUniformeService, never()).buscarItensPorPeriodo(any(), any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoNaoHaEntregasDaTurmaNoPeriodo() {
+        RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.ANO, 2026, null, null, null);
+        Periodo periodo = new Periodo(LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2026, 12, 31, 23, 59, 59));
+        java.util.UUID turmaId = java.util.UUID.randomUUID();
+
+        when(periodoResolver.resolver(filtro)).thenReturn(periodo);
+        when(pedidoUniformeService.buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId))
+                .thenReturn(List.of());
+
+        assertThrows(NotFoundException.class,
+                () -> relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId));
+
+        verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+    }
+
+    private PedidoUniforme entregaDe(String nomeTurma, String nomeAluno, int quantidade, LocalDateTime data) {
+        TipoUniforme tipo = TipoUniforme.builder().id(java.util.UUID.randomUUID()).tipo("Camiseta").build();
+        Uniforme uniforme = Uniforme.builder().tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).build();
+        Turma turma = Turma.builder().id(java.util.UUID.randomUUID()).nome(nomeTurma).build();
+        Aluno aluno = Aluno.builder().nome(nomeAluno).turma(turma).build();
+        Pedido pedido = Pedido.builder().aluno(aluno).dataEfetivada(data).build();
+
+        return PedidoUniforme.builder().pedido(pedido).uniforme(uniforme).quantidade(quantidade).build();
     }
 
     @Test

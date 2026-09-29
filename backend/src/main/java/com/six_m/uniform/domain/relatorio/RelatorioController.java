@@ -14,12 +14,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/relatorio")
-@Tag(name = "Relatório", description = "Geração de relatórios em PDF sobre estoque, entrada, saída e transações de uniformes")
+@Tag(name = "Relatório", description = "Geração de relatórios em PDF sobre estoque, entrada, saída, entregas por turma e transações de uniformes")
 @SecurityRequirement(name = "bearerAuth")
 @Validated
 public class RelatorioController {
@@ -62,6 +65,21 @@ public class RelatorioController {
     public ResponseEntity<byte[]> gerarRelatorioSaida(@Valid RelatorioFiltroDTO filtro) {
         byte[] pdf = relatorioService.gerarRelatorioSaida(filtro);
         return responderComPdf(pdf, "relatorio-saida.pdf");
+    }
+
+    @GetMapping("/entregas-turma")
+    @Operation(summary = "Relatório de entregas por turma", description = "Gera um PDF com os uniformes entregues aos alunos no período, agrupados por turma e com subtotal de cada uma. Informe turmaId para restringir a uma única turma; sem ele, o relatório cobre todas. Filtro por mês (tipo=MES, anoInicio, mesInicio, e opcionalmente anoFim/mesFim para um intervalo) ou por ano (tipo=ANO, anoInicio, e opcionalmente anoFim)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "PDF gerado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Filtro inválido"),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
+            @ApiResponse(responseCode = "404", description = "Não há entregas para a turma no período informado")
+    })
+    public ResponseEntity<byte[]> gerarRelatorioEntregasPorTurma(
+            @Valid RelatorioFiltroDTO filtro,
+            @RequestParam(required = false) UUID turmaId) {
+        byte[] pdf = relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId);
+        return responderComPdf(pdf, "relatorio-entregas-turma.pdf");
     }
 
     @GetMapping("/transacoes")

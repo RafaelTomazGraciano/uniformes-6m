@@ -7,13 +7,21 @@ import {
   type ReactNode,
 } from 'react'
 
-import { type AuthSession, clearStoredSession, getStoredSession, loginUser, setStoredSession } from '@/lib/auth'
+import {
+  type AuthSession,
+  type AuthUser,
+  clearStoredSession,
+  getStoredSession,
+  loginUser,
+  setStoredSession,
+} from '@/lib/auth'
 
 type AuthContextValue = {
   session: AuthSession | null
   isAuthenticated: boolean
   login: (email: string, senha: string) => Promise<void>
   logout: () => void
+  atualizarUsuario: (usuario: AuthUser) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -41,14 +49,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
   }, [])
 
+  /* O token continua válido depois de editar o perfil; só os dados exibidos
+     mudam. Regravar a sessão evita exigir um novo login por causa do nome. */
+  const atualizarUsuario = useCallback((usuario: AuthUser) => {
+    setSession((atual) => {
+      if (!atual) return atual
+
+      const proxima = { ...atual, user: usuario }
+      setStoredSession(proxima)
+      return proxima
+    })
+  }, [])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       isAuthenticated: Boolean(session),
       login,
       logout,
+      atualizarUsuario,
     }),
-    [login, logout, session],
+    [atualizarUsuario, login, logout, session],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

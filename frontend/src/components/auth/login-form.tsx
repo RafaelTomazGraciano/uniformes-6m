@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { EyeOff, Lock, LogIn, User } from 'lucide-react'
+import { Eye, EyeOff, Lock, LogIn, User } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
@@ -17,6 +17,7 @@ export function LoginForm() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [rememberMe, setRememberMe] = useState(false)
+  const [senhaVisivel, setSenhaVisivel] = useState(false)
 
   const {
     register,
@@ -72,14 +73,24 @@ export function LoginForm() {
           <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="senha"
-            type="password"
+            type={senhaVisivel ? 'text' : 'password'}
             placeholder="Digite sua senha"
             autoComplete="current-password"
             className="h-11 rounded-md border-border bg-card pl-9 pr-10 text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
             {...register('senha')}
             aria-invalid={Boolean(errors.senha)}
           />
-          <EyeOff className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          {/* type="button": dentro do form, o padrão seria submit e o clique tentaria logar. */}
+          <button
+            type="button"
+            onClick={() => setSenhaVisivel((visivel) => !visivel)}
+            aria-label={senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-pressed={senhaVisivel}
+            aria-controls="senha"
+            className="absolute top-1/2 right-3 -translate-y-1/2 rounded-sm text-muted-foreground outline-ring/50 hover:text-foreground focus-visible:outline-2"
+          >
+            {senhaVisivel ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
         </div>
         {errors.senha && <p className="text-sm text-destructive">{errors.senha.message}</p>}
       </div>
@@ -94,14 +105,9 @@ export function LoginForm() {
           Lembrar-me
         </Label>
 
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-[11px] font-medium text-primary"
-          onClick={() => toast.warning('Recuperacao de senha em breve.')}
-        >
+        <Link to="/trocar-senha" className="text-[11px] font-medium text-primary hover:underline">
           Esqueci minha senha
-        </Button>
+        </Link>
       </div>
 
       <Button

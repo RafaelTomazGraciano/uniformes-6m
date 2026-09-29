@@ -1,14 +1,13 @@
 import { apiFetch } from '@/lib/api-client'
 import type { AtualizarAlunoPayload, Aluno, CriarAlunoPayload } from '@/lib/types/aluno'
-import { pageableToQuery, type Page, type Pageable } from '@/lib/types/page'
+import { fetchAllPages, pageableToQuery, type Page, type Pageable } from '@/lib/types/page'
 
 export function listAlunos(pageable: Pageable = { sort: 'nome,asc' }): Promise<Page<Aluno>> {
   return apiFetch(`/aluno${pageableToQuery(pageable)}`)
 }
 
-export async function listAllAlunos(): Promise<Aluno[]> {
-  const page = await apiFetch<Page<Aluno>>(`/aluno${pageableToQuery({ size: 100, sort: 'nome,asc' })}`)
-  return page.content
+export function listAllAlunos(): Promise<Aluno[]> {
+  return fetchAllPages((pageable) => listAlunos({ ...pageable, sort: 'nome,asc' }))
 }
 
 export function getAluno(id: string): Promise<Aluno> {
