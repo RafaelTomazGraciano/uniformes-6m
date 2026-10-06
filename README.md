@@ -21,6 +21,7 @@ docker compose up -d --build
 ```
 
 A API sobe em `http://localhost:8080`, com o Swagger em `http://localhost:8080/swagger-ui.html`.
+No Docker Compose do backend, a porta `8080` já é publicada para acesso local/rede.
 
 **2. Frontend** — precisa de Node 20+ e pnpm:
 
@@ -32,6 +33,8 @@ pnpm dev
 ```
 
 A interface sobe em `http://localhost:5173`. Não há usuário cadastrado na primeira execução: crie o seu em `/register`.
+Como o Vite está configurado para `0.0.0.0`, outros dispositivos da LAN podem acessar em `http://IP_DA_MAQUINA:5173`.
+Para o front conversar com a API nessa configuração, ajuste `frontend/.env` (`VITE_API_URL=http://IP_DA_MAQUINA:8080/api`).
 
 As instruções completas de cada parte — variáveis de ambiente, scripts, testes e estrutura — estão nos READMEs linkados na tabela acima.
 

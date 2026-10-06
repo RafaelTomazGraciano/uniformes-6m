@@ -47,6 +47,7 @@ pnpm dev
 ```
 
 A aplicação sobe em `http://localhost:5173`.
+Com o `host` do Vite configurado como `0.0.0.0`, também pode ser acessada na rede local em `http://IP_DA_MAQUINA:5173`.
 
 Na primeira execução não há usuário cadastrado: acesse `/register` para criar o seu e depois entre por `/login`.
 
@@ -64,6 +65,7 @@ pnpm preview   # serve o dist/ localmente para conferência
 | `VITE_API_URL` | Não         | `http://localhost:8080/api` | URL base da API que o front consome. |
 
 O padrão já aponta para o backend local, então o `.env` só é necessário quando a API estiver em outro endereço.
+Para acesso em LAN, configure `VITE_API_URL` com o IP da máquina que está rodando o backend (ex.: `http://192.168.1.10:8080/api`).
 
 > As variáveis do Vite são lidas no momento do build. Depois de alterar o `.env`, reinicie o `pnpm dev`.
 

@@ -45,6 +45,9 @@ docker compose up -d --build
 ```
 
 A API estará disponível em `http://localhost:8080`.
+No `docker-compose.yml`, a porta `8080` já é publicada como `8080:8080`, permitindo acesso a partir de outros dispositivos da mesma rede local.
+
+Para CORS em LAN, ajuste `CORS_ALLOWED_ORIGINS` no `.env` (exemplo padrão: `http://localhost:5173,http://127.0.0.1:5173,http://192.168.1.*:5173`).
 
 ### Verificando os logs
 
