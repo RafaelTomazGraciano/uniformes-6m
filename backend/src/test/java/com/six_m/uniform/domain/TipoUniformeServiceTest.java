@@ -61,6 +61,31 @@ public class TipoUniformeServiceTest {
     }
 
     @Test
+    void deveLancarExcecaoQuandoTipoJaExisteAoCriar() {
+        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("Camiseta");
+        when(tipoUniformeRepository.existsByTipoIgnoreCase("Camiseta")).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> tipoUniformeService.criarTipoUniforme(dto));
+
+        assertEquals("Já existe um tipo de uniforme com este nome", exception.getMessage());
+        verify(tipoUniformeRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRemoverEspacosDasPontasAoCriarTipoUniforme() {
+        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("  Camiseta gola V  ");
+        when(tipoUniformeRepository.save(any(TipoUniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        tipoUniformeService.criarTipoUniforme(dto);
+
+        ArgumentCaptor<TipoUniforme> captor = ArgumentCaptor.forClass(TipoUniforme.class);
+        verify(tipoUniformeRepository).save(captor.capture());
+        assertEquals("Camiseta gola V", captor.getValue().getTipo());
+        verify(tipoUniformeRepository).existsByTipoIgnoreCase("Camiseta gola V");
+    }
+
+    @Test
     void deveBuscarTodosTiposUniformePaginado() {
         TipoUniforme tipo1 = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
         TipoUniforme tipo2 = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Calça").build();
@@ -134,6 +159,37 @@ public class TipoUniformeServiceTest {
 
         assertThrows(NotFoundException.class, () -> tipoUniformeService.atualizarTipoUniforme(id, dto));
         verify(tipoUniformeRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoTipoJaPertenceAOutroTipoAoAtualizar() {
+        UUID id = UUID.randomUUID();
+        TipoUniforme existente = TipoUniforme.builder().id(id).tipo("Calça").build();
+        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta");
+
+        when(tipoUniformeRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(tipoUniformeRepository.existsByTipoIgnoreCaseAndIdNot("Camiseta", id)).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> tipoUniformeService.atualizarTipoUniforme(id, dto));
+
+        assertEquals("Já existe um tipo de uniforme com este nome", exception.getMessage());
+        verify(tipoUniformeRepository, never()).save(any());
+    }
+
+    @Test
+    void devePermitirAtualizarTipoUniformeMantendoOMesmoNome() {
+        UUID id = UUID.randomUUID();
+        TipoUniforme existente = TipoUniforme.builder().id(id).tipo("Camiseta").build();
+        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta");
+
+        when(tipoUniformeRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(tipoUniformeRepository.existsByTipoIgnoreCaseAndIdNot("Camiseta", id)).thenReturn(false);
+        when(tipoUniformeRepository.save(any(TipoUniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseTipoUniformeDTO response = tipoUniformeService.atualizarTipoUniforme(id, dto);
+
+        assertEquals("Camiseta", response.tipo());
     }
 
     @Test

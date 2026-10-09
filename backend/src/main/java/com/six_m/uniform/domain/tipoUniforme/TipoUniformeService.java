@@ -26,8 +26,14 @@ public class TipoUniformeService {
 
     @Transactional
     public ResponseTipoUniformeDTO criarTipoUniforme(RequestCriarTipoUniformeDTO dto) {
+        String tipo = dto.tipo().trim();
+
+        if (tipoUniformeRepository.existsByTipoIgnoreCase(tipo)) {
+            throw new BadRequestException("Já existe um tipo de uniforme com este nome");
+        }
+
         TipoUniforme tipoUniforme = TipoUniforme.builder()
-                .tipo(dto.tipo())
+                .tipo(tipo)
                 .build();
 
         tipoUniforme = tipoUniformeRepository.save(tipoUniforme);
@@ -49,8 +55,13 @@ public class TipoUniformeService {
     @Transactional
     public ResponseTipoUniformeDTO atualizarTipoUniforme(UUID id, RequestAtualizarTipoUniformeDTO dto) {
         TipoUniforme tipoUniforme = buscarTipoUniformeEntidade(id);
+        String tipo = dto.tipo().trim();
 
-        tipoUniforme.setTipo(dto.tipo());
+        if (tipoUniformeRepository.existsByTipoIgnoreCaseAndIdNot(tipo, id)) {
+            throw new BadRequestException("Já existe um tipo de uniforme com este nome");
+        }
+
+        tipoUniforme.setTipo(tipo);
 
         tipoUniforme = tipoUniformeRepository.save(tipoUniforme);
 

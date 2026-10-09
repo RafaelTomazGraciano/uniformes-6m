@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.LinkedHashMap;
@@ -76,6 +77,31 @@ public class RestExceptionHandler {
                 .body(Map.of("message", "Email ou senha incorretos"));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    private ResponseEntity<Map<String, String>> handleDataIntegrityViolationException(DataIntegrityViolationException exception){
+        String detalhe = exception.getMostSpecificCause().getMessage();
+
+        if (detalhe != null) {
+            if (detalhe.contains("uq_turma_nome")) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Já existe uma turma com este nome"));
+            }
+            if (detalhe.contains("uq_tipo_uniforme_tipo")) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Já existe um tipo de uniforme com este nome"));
+            }
+            if (detalhe.contains("uq_uniforme_tipo_tamanho_sexo")) {
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "Este uniforme está sendo registrado por outra operação neste momento. Tente novamente"));
+            }
+        }
+
+        return handleGenericException(exception);
+    }
+
     @ExceptionHandler(Exception.class)
     private ResponseEntity<Map<String, String>> handleGenericException(Exception exception){
         logger.error("Erro não tratado", exception);
@@ -83,5 +109,6 @@ public class RestExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("message", "Ocorreu um erro inesperado. Tente novamente mais tarde."));
     }
+
 
 }
