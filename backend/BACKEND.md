@@ -47,7 +47,7 @@ docker compose up -d --build
 A API estará disponível em `http://localhost:8080`.
 No `docker-compose.yml`, a porta `8080` já é publicada como `8080:8080`, permitindo acesso a partir de outros dispositivos da mesma rede local.
 
-Para CORS em LAN, ajuste `CORS_ALLOWED_ORIGINS` no `.env` (exemplo padrão: `http://localhost:5173,http://127.0.0.1:5173,http://192.168.1.*:5173`).
+Para CORS, ajuste `CORS_ALLOWED_ORIGINS` no `.env`. Para testar em LAN, use `*` (apenas em testes; em produção, informe o domínio do frontend).
 
 ### Verificando os logs
 
@@ -134,7 +134,7 @@ Apenas `POST /api/auth/login` e `POST /api/usuario/registrar` são públicos —
 
 Toda resposta de erro segue um dos dois formatos abaixo.
 
-**Erro de negócio (`400`/`404`)** — recurso não encontrado ou regra violada (ex: email duplicado, recurso com vínculos que impedem exclusão, parâmetro de ordenação inválido):
+**Erro de negócio (`400`/`404`/`409`)** — recurso não encontrado, regra violada ou conflito (ex: email duplicado, nome de turma já existente, estoque insuficiente, recurso com vínculos que impedem exclusão, parâmetro de ordenação inválido):
 
 ```json
 {
@@ -204,8 +204,6 @@ Rodar todos os testes (unitários + integração):
 ```bash
 ./gradlew test
 ```
-
-Uma seed de dados de teste (`src/test/resources/db/migration`) roda automaticamente apenas durante os testes, sem afetar o schema de produção — ela não é incluída no `.jar` final da aplicação.
 
 ---
 

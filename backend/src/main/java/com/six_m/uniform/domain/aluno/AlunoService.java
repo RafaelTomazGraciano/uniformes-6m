@@ -28,6 +28,8 @@ public class AlunoService {
 
         Aluno aluno = Aluno.builder()
                 .nome(dto.nome())
+                .nomeResponsavel(dto.nomeResponsavel())
+                .telefoneResponsavel(dto.telefoneResponsavel())
                 .turma(turma)
                 .build();
 
@@ -53,6 +55,8 @@ public class AlunoService {
         Turma turma = buscarTurmaOuFalhar(dto.turmaId());
 
         aluno.setNome(dto.nome());
+        aluno.setNomeResponsavel(dto.nomeResponsavel());
+        aluno.setTelefoneResponsavel(dto.telefoneResponsavel());
         aluno.setTurma(turma);
 
         aluno = alunoRepository.save(aluno);
@@ -80,6 +84,7 @@ public class AlunoService {
     }
 
     private ResponseAlunoDTO toResponseDTO(Aluno aluno) {
-        return new ResponseAlunoDTO(aluno.getId(), aluno.getNome(), aluno.getTurma().getId(), aluno.getTurma().getNome());
+        return new ResponseAlunoDTO(aluno.getId(), aluno.getNome(), aluno.getNomeResponsavel(),
+                aluno.getTelefoneResponsavel(), aluno.getTurma().getId(), aluno.getTurma().getNome());
     }
 }

@@ -45,7 +45,7 @@ public class AlunoServiceTest {
     void deveCriarAlunoComSucesso() {
         UUID turmaId = UUID.randomUUID();
         Turma turma = Turma.builder().id(turmaId).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
-        RequestCriarAlunoDTO dto = new RequestCriarAlunoDTO("João", turmaId);
+        RequestCriarAlunoDTO dto = new RequestCriarAlunoDTO("João", "Mae Joao", "43999998888", turmaId);
 
         when(turmaRepository.findById(turmaId)).thenReturn(Optional.of(turma));
 
@@ -60,6 +60,8 @@ public class AlunoServiceTest {
 
         assertEquals(idGerado, response.id());
         assertEquals("João", response.nome());
+        assertEquals("Mae Joao", response.nomeResponsavel());
+        assertEquals("43999998888", response.telefoneResponsavel());
         assertEquals(turmaId, response.turmaId());
         assertEquals("Turma A", response.turmaNome());
     }
@@ -68,7 +70,7 @@ public class AlunoServiceTest {
     void deveSalvarAlunoComOsCamposCorretosAoCriar() {
         UUID turmaId = UUID.randomUUID();
         Turma turma = Turma.builder().id(turmaId).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
-        RequestCriarAlunoDTO dto = new RequestCriarAlunoDTO("Maria", turmaId);
+        RequestCriarAlunoDTO dto = new RequestCriarAlunoDTO("Maria","Mae Maria", "43999998888", turmaId);
 
         when(turmaRepository.findById(turmaId)).thenReturn(Optional.of(turma));
         when(alunoRepository.save(any(Aluno.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -79,13 +81,15 @@ public class AlunoServiceTest {
         verify(alunoRepository).save(captor.capture());
 
         assertEquals("Maria", captor.getValue().getNome());
+        assertEquals("Mae Maria", captor.getValue().getNomeResponsavel());
+        assertEquals("43999998888", captor.getValue().getTelefoneResponsavel());
         assertEquals(turma, captor.getValue().getTurma());
     }
 
     @Test
     void deveLancarExcecaoQuandoTurmaNaoExisteAoCriarAluno() {
         UUID turmaId = UUID.randomUUID();
-        RequestCriarAlunoDTO dto = new RequestCriarAlunoDTO("João", turmaId);
+        RequestCriarAlunoDTO dto = new RequestCriarAlunoDTO("João","Mae Joao", "43999998888", turmaId);
 
         when(turmaRepository.findById(turmaId)).thenReturn(Optional.empty());
 
@@ -159,9 +163,9 @@ public class AlunoServiceTest {
 
         Turma turmaAntiga = Turma.builder().id(UUID.randomUUID()).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
         Turma turmaNova = Turma.builder().id(novaTurmaId).nome("Turma B").turno(Turno.NOTURNO).ensino(Ensino.MEDIO).build();
-        Aluno alunoExistente = Aluno.builder().id(id).nome("João").turma(turmaAntiga).build();
+        Aluno alunoExistente = Aluno.builder().id(id).nome("João").nomeResponsavel("Responsável Antigo").telefoneResponsavel("43911112222").turma(turmaAntiga).build();
 
-        RequestAtualizarAlunoDTO dto = new RequestAtualizarAlunoDTO("João Atualizado", novaTurmaId);
+        RequestAtualizarAlunoDTO dto = new RequestAtualizarAlunoDTO("João Atualizado","Mae Joao Atualizado", "43999998888", novaTurmaId);
 
         when(alunoRepository.findById(id)).thenReturn(Optional.of(alunoExistente));
         when(turmaRepository.findById(novaTurmaId)).thenReturn(Optional.of(turmaNova));
@@ -171,6 +175,8 @@ public class AlunoServiceTest {
 
         assertEquals(id, response.id());
         assertEquals("João Atualizado", response.nome());
+        assertEquals("Mae Joao Atualizado", response.nomeResponsavel());
+        assertEquals("43999998888", response.telefoneResponsavel());
         assertEquals(novaTurmaId, response.turmaId());
         assertEquals("Turma B", response.turmaNome());
     }
@@ -178,7 +184,7 @@ public class AlunoServiceTest {
     @Test
     void deveLancarExcecaoQuandoAlunoNaoExisteAoAtualizar() {
         UUID id = UUID.randomUUID();
-        RequestAtualizarAlunoDTO dto = new RequestAtualizarAlunoDTO("João", UUID.randomUUID());
+        RequestAtualizarAlunoDTO dto = new RequestAtualizarAlunoDTO("João","Mae Joao", "43999998888", UUID.randomUUID());
 
         when(alunoRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -197,7 +203,7 @@ public class AlunoServiceTest {
 
         Turma turmaAntiga = Turma.builder().id(UUID.randomUUID()).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
         Aluno alunoExistente = Aluno.builder().id(id).nome("João").turma(turmaAntiga).build();
-        RequestAtualizarAlunoDTO dto = new RequestAtualizarAlunoDTO("João", turmaId);
+        RequestAtualizarAlunoDTO dto = new RequestAtualizarAlunoDTO("João","Mae Joao", "43999998888", turmaId);
 
         when(alunoRepository.findById(id)).thenReturn(Optional.of(alunoExistente));
         when(turmaRepository.findById(turmaId)).thenReturn(Optional.empty());

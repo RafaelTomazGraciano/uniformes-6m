@@ -6,8 +6,6 @@ import com.six_m.uniform.shared.enums.Tamanho;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
@@ -19,8 +17,6 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name="uniforme")
-@SQLDelete(sql = "UPDATE uniforme SET deletado = true WHERE id = ?")
-@SQLRestriction("deletado = false")
 public class Uniforme {
 
     @Id
@@ -40,7 +36,4 @@ public class Uniforme {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Sexo sexo;
-
-    @Builder.Default
-    private Boolean deletado = false;
 }

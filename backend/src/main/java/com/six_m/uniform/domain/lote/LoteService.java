@@ -73,15 +73,16 @@ public class LoteService {
         NotaFiscal notaFiscal = notaFiscalService.atualizarParaLote(lote.getNotaFiscal(), dto.chaveAcesso());
 
         List<ItemLote> itensAntigos = itemLoteService.buscarItensPorLote(id);
-        for (ItemLote itemAntigo : itensAntigos) {
-            uniformeService.estornarEntrada(itemAntigo.getTipoUniforme().getId(), itemAntigo.getTamanho(), itemAntigo.getSexo(), itemAntigo.getQuantidade());
-        }
-        itemLoteService.deletarItensPorLote(itensAntigos);
 
         List<ItemLote> itensNovos = itemLoteService.criarItensParaLote(lote, dto.itens());
         for (ItemLote itemNovo : itensNovos) {
             uniformeService.darEntrada(itemNovo.getTipoUniforme().getId(), itemNovo.getTamanho(), itemNovo.getSexo(), itemNovo.getQuantidade());
         }
+
+        for (ItemLote itemAntigo : itensAntigos) {
+            uniformeService.estornarEntrada(itemAntigo.getTipoUniforme().getId(), itemAntigo.getTamanho(), itemAntigo.getSexo(), itemAntigo.getQuantidade());
+        }
+        itemLoteService.deletarItensPorLote(itensAntigos);
 
         lote.setNotaFiscal(notaFiscal);
         lote.setFornecedor(dto.fornecedor());

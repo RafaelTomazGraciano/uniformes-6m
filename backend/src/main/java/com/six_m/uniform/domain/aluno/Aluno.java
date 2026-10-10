@@ -29,6 +29,10 @@ public class Aluno {
 
     private String nome;
 
+    private String nomeResponsavel;
+
+    private String telefoneResponsavel;
+
     @Builder.Default
     private Boolean deletado = false;
 }

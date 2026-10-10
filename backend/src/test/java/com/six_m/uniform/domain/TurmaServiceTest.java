@@ -77,6 +77,31 @@ public class TurmaServiceTest {
     }
 
     @Test
+    void deveLancarExcecaoQuandoNomeJaExisteAoCriarTurma() {
+        RequestCriarTurmaDTO dto = new RequestCriarTurmaDTO("Turma A", Turno.DIURNO, Ensino.FUNDAMENTAL);
+        when(turmaRepository.existsByNomeIgnoreCase("Turma A")).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> turmaService.criarTurma(dto));
+
+        assertEquals("Já existe uma turma com este nome", exception.getMessage());
+        verify(turmaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRemoverEspacosDoNomeAoCriarTurma() {
+        RequestCriarTurmaDTO dto = new RequestCriarTurmaDTO("  Turma A  ", Turno.INTEGRAL, Ensino.MEDIO);
+        when(turmaRepository.save(any(Turma.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        turmaService.criarTurma(dto);
+
+        ArgumentCaptor<Turma> captor = ArgumentCaptor.forClass(Turma.class);
+        verify(turmaRepository).save(captor.capture());
+        assertEquals("Turma A", captor.getValue().getNome());
+        verify(turmaRepository).existsByNomeIgnoreCase("Turma A");
+    }
+
+    @Test
     void deveBuscarTodasTurmasPaginado() {
         Turma turma1 = Turma.builder().id(UUID.randomUUID()).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
         Turma turma2 = Turma.builder().id(UUID.randomUUID()).nome("Turma B").turno(Turno.VESPERTINO).ensino(Ensino.MEDIO).build();
@@ -159,6 +184,38 @@ public class TurmaServiceTest {
 
         assertTrue(exception.getMessage().contains(id.toString()));
         verify(turmaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoNomeJaPertenceAOutraTurmaAoAtualizar() {
+        UUID id = UUID.randomUUID();
+        Turma turma = Turma.builder().id(id).nome("Turma Antiga").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
+        RequestAtualizarTurmaDTO dto = new RequestAtualizarTurmaDTO("Turma B", Turno.DIURNO, Ensino.FUNDAMENTAL);
+
+        when(turmaRepository.findById(id)).thenReturn(Optional.of(turma));
+        when(turmaRepository.existsByNomeIgnoreCaseAndIdNot("Turma B", id)).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> turmaService.atualizarTurma(id, dto));
+
+        assertEquals("Já existe uma turma com este nome", exception.getMessage());
+        verify(turmaRepository, never()).save(any());
+    }
+
+    @Test
+    void devePermitirAtualizarTurmaMantendoOMesmoNome() {
+        UUID id = UUID.randomUUID();
+        Turma turma = Turma.builder().id(id).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
+        RequestAtualizarTurmaDTO dto = new RequestAtualizarTurmaDTO("Turma A", Turno.INTEGRAL, Ensino.FUNDAMENTAL);
+
+        when(turmaRepository.findById(id)).thenReturn(Optional.of(turma));
+        when(turmaRepository.existsByNomeIgnoreCaseAndIdNot("Turma A", id)).thenReturn(false);
+        when(turmaRepository.save(any(Turma.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseTurmaDTO response = turmaService.atualizarTurma(id, dto);
+
+        assertEquals("Turma A", response.nome());
+        assertEquals(Turno.INTEGRAL, response.turno());
     }
 
     @Test
