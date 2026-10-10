@@ -38,16 +38,16 @@ public class PedidoUniformeService {
 
     @Transactional
     public List<PedidoUniforme> criarItensParaPedido(Pedido pedido, List<RequestItemSaidaDTO> itensDto) {
-        validarItensSemDuplicidade(itensDto);
+        Map<UUID, Integer> quantidadePorUniforme = consolidarItens(itensDto);
 
         List<PedidoUniforme> itens = new ArrayList<>();
-        for (RequestItemSaidaDTO itemDto : itensDto) {
-            Uniforme uniforme = uniformeService.buscarUniformeEntidade(itemDto.uniformeId());
+        for (Map.Entry<UUID, Integer> entrada : quantidadePorUniforme.entrySet()) {
+            Uniforme uniforme = uniformeService.buscarUniformeEntidade(entrada.getKey());
 
             PedidoUniforme pedidoUniforme = PedidoUniforme.builder()
                     .pedido(pedido)
                     .uniforme(uniforme)
-                    .quantidade(itemDto.quantidade())
+                    .quantidade(entrada.getValue())
                     .build();
 
             itens.add(pedidoUniformeRepository.save(pedidoUniforme));
@@ -82,12 +82,19 @@ public class PedidoUniformeService {
         return pedidoUniformeRepository.findByPedidoDataEfetivadaBetweenAndPedidoAlunoTurmaId(inicio, fim, turmaId);
     }
 
-    private void validarItensSemDuplicidade(List<RequestItemSaidaDTO> itensDto) {
-        Set<UUID> uniformesVistos = new HashSet<>();
+    private Map<UUID, Integer> consolidarItens(List<RequestItemSaidaDTO> itensDto) {
+        Map<UUID, Integer> consolidado = new LinkedHashMap<>();
         for (RequestItemSaidaDTO item : itensDto) {
-            if (!uniformesVistos.add(item.uniformeId())) {
-                throw new BadRequestException("Item duplicado no pedido: mesmo uniforme informado mais de uma vez");
-            }
+            consolidado.merge(item.uniformeId(), item.quantidade(), this::somarQuantidades);
+        }
+        return consolidado;
+    }
+
+    private Integer somarQuantidades(Integer a, Integer b) {
+        try {
+            return Math.addExact(a, b);
+        } catch (ArithmeticException e) {
+            throw new BadRequestException("Quantidade total do item excede o limite permitido");
         }
     }
 

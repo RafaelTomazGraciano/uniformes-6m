@@ -53,6 +53,10 @@ public class UniformeService {
         Uniforme uniforme = uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoUniformeId, tamanho, sexo)
                 .orElseThrow(() -> new NotFoundException("Uniforme não encontrado para estornar a entrada anterior"));
 
+        if (uniforme.getQuantidade() < quantidade) {
+            throw new BadRequestException("Não é possível estornar a entrada: o estoque ficaria negativo, pois parte das unidades já saiu em pedidos");
+        }
+
         uniforme.setQuantidade(uniforme.getQuantidade() - quantidade);
 
         uniformeRepository.save(uniforme);

@@ -116,16 +116,33 @@ public class PedidoUniformeServiceTest {
     }
 
     @Test
-    void deveLancarExcecaoQuandoHaItensDuplicadosNoPedido() {
+    void deveSomarQuantidadesQuandoMesmoUniformeApareceMaisDeUmaVezNoPedido() {
         UUID uniformeId = UUID.randomUUID();
         Pedido pedido = Pedido.builder().id(UUID.randomUUID()).build();
-        RequestItemSaidaDTO item1 = new RequestItemSaidaDTO(uniformeId, 2);
-        RequestItemSaidaDTO item2 = new RequestItemSaidaDTO(uniformeId, 5);
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        Uniforme uniforme = Uniforme.builder().id(uniformeId).tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).build();
+
+        when(uniformeService.buscarUniformeEntidade(uniformeId)).thenReturn(uniforme);
+        when(pedidoUniformeRepository.save(any(PedidoUniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<PedidoUniforme> resultado = pedidoUniformeService.criarItensParaPedido(pedido,
+                List.of(new RequestItemSaidaDTO(uniformeId, 2), new RequestItemSaidaDTO(uniformeId, 5)));
+
+        assertEquals(1, resultado.size());
+        assertEquals(7, resultado.getFirst().getQuantidade());
+        verify(pedidoUniformeRepository, times(1)).save(any(PedidoUniforme.class));
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoSomaDasQuantidadesExcedeOLimiteNoPedido() {
+        UUID uniformeId = UUID.randomUUID();
+        Pedido pedido = Pedido.builder().id(UUID.randomUUID()).build();
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> pedidoUniformeService.criarItensParaPedido(pedido, List.of(item1, item2)));
+                () -> pedidoUniformeService.criarItensParaPedido(pedido,
+                        List.of(new RequestItemSaidaDTO(uniformeId, Integer.MAX_VALUE), new RequestItemSaidaDTO(uniformeId, 1))));
 
-        assertEquals("Item duplicado no pedido: mesmo uniforme informado mais de uma vez", exception.getMessage());
+        assertEquals("Quantidade total do item excede o limite permitido", exception.getMessage());
         verify(pedidoUniformeRepository, never()).save(any());
     }
 
