@@ -45,7 +45,7 @@ public class TipoUniformeServiceTest {
 
     @Test
     void deveCriarTipoUniformeComSucesso() {
-        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("Camiseta");
+        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("Camiseta", 10);
 
         UUID idGerado = UUID.randomUUID();
         when(tipoUniformeRepository.save(any(TipoUniforme.class))).thenAnswer(invocation -> {
@@ -58,11 +58,12 @@ public class TipoUniformeServiceTest {
 
         assertEquals(idGerado, response.id());
         assertEquals("Camiseta", response.tipo());
+        assertEquals(10, response.estoqueBaixo());
     }
 
     @Test
     void deveLancarExcecaoQuandoTipoJaExisteAoCriar() {
-        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("Camiseta");
+        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("Camiseta", 10);
         when(tipoUniformeRepository.existsByTipoIgnoreCase("Camiseta")).thenReturn(true);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -74,7 +75,7 @@ public class TipoUniformeServiceTest {
 
     @Test
     void deveRemoverEspacosDasPontasAoCriarTipoUniforme() {
-        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("  Camiseta gola V  ");
+        RequestCriarTipoUniformeDTO dto = new RequestCriarTipoUniformeDTO("  Camiseta gola V  ", 10);
         when(tipoUniformeRepository.save(any(TipoUniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         tipoUniformeService.criarTipoUniforme(dto);
@@ -82,6 +83,7 @@ public class TipoUniformeServiceTest {
         ArgumentCaptor<TipoUniforme> captor = ArgumentCaptor.forClass(TipoUniforme.class);
         verify(tipoUniformeRepository).save(captor.capture());
         assertEquals("Camiseta gola V", captor.getValue().getTipo());
+        assertEquals(10, captor.getValue().getEstoqueBaixo());
         verify(tipoUniformeRepository).existsByTipoIgnoreCase("Camiseta gola V");
     }
 
@@ -139,8 +141,8 @@ public class TipoUniformeServiceTest {
     @Test
     void deveAtualizarTipoUniformeComSucesso() {
         UUID id = UUID.randomUUID();
-        TipoUniforme tipoExistente = TipoUniforme.builder().id(id).tipo("Camiseta").build();
-        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta Polo");
+        TipoUniforme tipoExistente = TipoUniforme.builder().id(id).tipo("Camiseta").estoqueBaixo(10).build();
+        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta Polo", 5);
 
         when(tipoUniformeRepository.findById(id)).thenReturn(Optional.of(tipoExistente));
         when(tipoUniformeRepository.save(any(TipoUniforme.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -148,12 +150,13 @@ public class TipoUniformeServiceTest {
         ResponseTipoUniformeDTO response = tipoUniformeService.atualizarTipoUniforme(id, dto);
 
         assertEquals("Camiseta Polo", response.tipo());
+        assertEquals(5, response.estoqueBaixo());
     }
 
     @Test
     void deveLancarExcecaoQuandoTipoUniformeNaoExisteAoAtualizar() {
         UUID id = UUID.randomUUID();
-        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta Polo");
+        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta Polo", 5);
 
         when(tipoUniformeRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -164,8 +167,8 @@ public class TipoUniformeServiceTest {
     @Test
     void deveLancarExcecaoQuandoTipoJaPertenceAOutroTipoAoAtualizar() {
         UUID id = UUID.randomUUID();
-        TipoUniforme existente = TipoUniforme.builder().id(id).tipo("Calça").build();
-        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta");
+        TipoUniforme existente = TipoUniforme.builder().id(id).tipo("Calça").estoqueBaixo(10).build();
+        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta", 5);
 
         when(tipoUniformeRepository.findById(id)).thenReturn(Optional.of(existente));
         when(tipoUniformeRepository.existsByTipoIgnoreCaseAndIdNot("Camiseta", id)).thenReturn(true);
@@ -181,7 +184,7 @@ public class TipoUniformeServiceTest {
     void devePermitirAtualizarTipoUniformeMantendoOMesmoNome() {
         UUID id = UUID.randomUUID();
         TipoUniforme existente = TipoUniforme.builder().id(id).tipo("Camiseta").build();
-        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta");
+        RequestAtualizarTipoUniformeDTO dto = new RequestAtualizarTipoUniformeDTO("Camiseta", 5);
 
         when(tipoUniformeRepository.findById(id)).thenReturn(Optional.of(existente));
         when(tipoUniformeRepository.existsByTipoIgnoreCaseAndIdNot("Camiseta", id)).thenReturn(false);
@@ -190,6 +193,7 @@ public class TipoUniformeServiceTest {
         ResponseTipoUniformeDTO response = tipoUniformeService.atualizarTipoUniforme(id, dto);
 
         assertEquals("Camiseta", response.tipo());
+        assertEquals(5, response.estoqueBaixo());
     }
 
     @Test

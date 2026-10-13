@@ -44,14 +44,15 @@ public class RelatorioService {
                         u.getTipoUniforme().getTipo(),
                         u.getTamanho().name(),
                         u.getSexo().name(),
-                        String.valueOf(u.getQuantidade())
+                        String.valueOf(u.getQuantidade()),
+                        u.estaComEstoqueBaixo() ? "BAIXO" : "OK"
                 ))
                 .toList();
 
         return pdfTableBuilder.gerarPdf(
                 "Relatório de Estoque de Uniformes",
                 null,
-                List.of("Tipo", "Tamanho", "Sexo", "Quantidade"),
+                List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Situação"),
                 linhas,
                 null
         );

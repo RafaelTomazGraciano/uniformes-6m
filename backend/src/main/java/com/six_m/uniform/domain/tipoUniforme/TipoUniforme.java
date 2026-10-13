@@ -19,4 +19,6 @@ public class TipoUniforme {
     private UUID id;
 
     private String tipo;
+
+    private Integer estoqueBaixo;
 }

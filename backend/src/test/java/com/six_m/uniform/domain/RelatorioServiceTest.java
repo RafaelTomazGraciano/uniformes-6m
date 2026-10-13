@@ -56,7 +56,7 @@ public class RelatorioServiceTest {
 
     @Test
     void deveGerarRelatorioEstoqueComSucesso() {
-        TipoUniforme tipo = TipoUniforme.builder().id(java.util.UUID.randomUUID()).tipo("Camiseta").build();
+        TipoUniforme tipo = TipoUniforme.builder().id(java.util.UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(5).build();
         Uniforme uniforme = Uniforme.builder().tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(10).build();
 
         when(uniformeService.buscarTodosUniformesEntidades()).thenReturn(List.of(uniforme));
@@ -67,9 +67,25 @@ public class RelatorioServiceTest {
         assertNotNull(resultado);
         ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
         verify(pdfTableBuilder).gerarPdf(eq("Relatório de Estoque de Uniformes"), isNull(),
-                eq(List.of("Tipo", "Tamanho", "Sexo", "Quantidade")), linhasCaptor.capture(), isNull());
+                eq(List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Situação")), linhasCaptor.capture(), isNull());
 
-        assertEquals(List.of("Camiseta", "M", "MASCULINO", "10"), linhasCaptor.getValue().getFirst());
+        assertEquals(List.of("Camiseta", "M", "MASCULINO", "10", "OK"), linhasCaptor.getValue().getFirst());
+    }
+
+    @Test
+    void deveMarcarComoBaixoNoRelatorioQuandoQuantidadeEstaAbaixoDoMinimo() {
+        TipoUniforme tipo = TipoUniforme.builder().id(java.util.UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
+        Uniforme uniforme = Uniforme.builder().tipoUniforme(tipo).tamanho(Tamanho.P).sexo(Sexo.FEMININO).quantidade(3).build();
+
+        when(uniformeService.buscarTodosUniformesEntidades()).thenReturn(List.of(uniforme));
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
+
+        relatorioService.gerarRelatorioEstoque();
+
+        ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
+        verify(pdfTableBuilder).gerarPdf(any(), any(), any(), linhasCaptor.capture(), any());
+
+        assertEquals(List.of("Camiseta", "P", "FEMININO", "3", "BAIXO"), linhasCaptor.getValue().getFirst());
     }
 
     @Test

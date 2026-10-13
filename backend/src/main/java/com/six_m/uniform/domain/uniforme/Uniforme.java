@@ -36,4 +36,8 @@ public class Uniforme {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Sexo sexo;
+
+    public boolean estaComEstoqueBaixo() {
+        return quantidade <= tipoUniforme.getEstoqueBaixo();
+    }
 }
