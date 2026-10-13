@@ -22,7 +22,8 @@ CREATE TYPE "tipo_escola" AS ENUM (
 CREATE TYPE "turno" AS ENUM (
   'DIURNO',
   'VESPERTINO',
-  'NOTURNO'
+  'NOTURNO',
+  'INTEGRAL'
 );
 
 CREATE TYPE "ensino" AS ENUM (
@@ -57,7 +58,7 @@ CREATE TABLE "uniforme" (
                             "tamanho" tamanho NOT NULL,
                             "quantidade" int NOT NULL DEFAULT 0,
                             "sexo" sexo NOT NULL,
-                            "deletado" bool NOT NULL DEFAULT false
+                            CONSTRAINT "ck_uniforme_quantidade" CHECK (quantidade >= 0)
 );
 
 CREATE TABLE "turma" (
@@ -71,6 +72,8 @@ CREATE TABLE "aluno" (
                          "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
                          "turma_id" uuid NOT NULL,
                          "nome" varchar(255) NOT NULL,
+                         "nome_responsavel" varchar(255),
+                         "telefone_responsavel" varchar(11),
                          "deletado" bool NOT NULL DEFAULT false
 );
 
@@ -78,7 +81,8 @@ CREATE TABLE "pedido_uniforme" (
                                    "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
                                    "uniforme_id" uuid NOT NULL,
                                    "pedido_id" uuid NOT NULL,
-                                   "quantidade" int NOT NULL
+                                   "quantidade" int NOT NULL,
+                                   CONSTRAINT "ck_pedido_uniforme_quantidade" CHECK (quantidade > 0)
 );
 
 CREATE TABLE "pedido" (
@@ -99,7 +103,8 @@ CREATE TABLE "item_lote" (
                              "lote_id" uuid NOT NULL,
                              "tamanho" tamanho NOT NULL,
                              "quantidade" int NOT NULL DEFAULT 0,
-                             "sexo" sexo NOT NULL
+                             "sexo" sexo NOT NULL,
+                             CONSTRAINT "ck_item_lote_quantidade" CHECK (quantidade > 0)
 );
 
 CREATE TABLE "lote" (
@@ -108,6 +113,12 @@ CREATE TABLE "lote" (
                         "fornecedor" varchar(255) NOT NULL,
                         "data_entrega" timestamp
 );
+
+CREATE UNIQUE INDEX "uq_tipo_uniforme_tipo" ON "tipo_uniforme" ((lower(tipo)));
+
+CREATE UNIQUE INDEX "uq_uniforme_tipo_tamanho_sexo" ON "uniforme" ("tipo_id", "tamanho", "sexo");
+
+CREATE UNIQUE INDEX "uq_turma_nome" ON "turma" ((lower(nome)));
 
 CREATE INDEX "idx_nome" ON "aluno" ("nome");
 

@@ -7,4 +7,6 @@ import java.util.UUID;
 
 @Repository
 public interface TurmaRepository extends JpaRepository<Turma, UUID> {
+    boolean existsByNomeIgnoreCase(String nome);
+    boolean existsByNomeIgnoreCaseAndIdNot(String nome, UUID id);
 }

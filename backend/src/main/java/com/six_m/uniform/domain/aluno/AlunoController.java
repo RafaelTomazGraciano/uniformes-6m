@@ -66,7 +66,7 @@ public class AlunoController {
     }
 
     @PutMapping("{id}")
-    @Operation(summary = "Atualizar aluno", description = "Atualiza nome e/ou turma de um aluno existente")
+    @Operation(summary = "Atualizar aluno", description = "Atualiza nome, dados do responsável e/ou turma de um aluno existente")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Aluno atualizado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Dados inválidos"),

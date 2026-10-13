@@ -115,7 +115,7 @@ class FluxoCompletoIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> alunoResponse = rest.postForEntity(
                 baseUrl() + "/aluno",
                 requisicao("""
-                        {"nome":"João da Silva","turmaId":"%s"}
+                        {"nome":"João da Silva","nomeResponsavel":"Ana Souza","telefoneResponsavel":"43999998888","turmaId":"%s"}
                         """.formatted(turmaId), token),
                 String.class);
 

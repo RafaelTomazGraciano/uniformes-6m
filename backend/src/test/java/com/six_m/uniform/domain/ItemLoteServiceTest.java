@@ -60,16 +60,34 @@ public class ItemLoteServiceTest {
     }
 
     @Test
-    void deveLancarExcecaoQuandoHaItensDuplicadosNoLote() {
+    void deveSomarQuantidadesQuandoMesmoItemApareceMaisDeUmaVezNoLote() {
         UUID tipoId = UUID.randomUUID();
         Lote lote = Lote.builder().id(UUID.randomUUID()).build();
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(tipoId).tipo("Camiseta").build();
         RequestItemEntradaDTO item1 = new RequestItemEntradaDTO(tipoId, Tamanho.M, Sexo.MASCULINO, 5);
         RequestItemEntradaDTO item2 = new RequestItemEntradaDTO(tipoId, Tamanho.M, Sexo.MASCULINO, 3);
+
+        when(tipoUniformeService.buscarTipoUniformeEntidade(tipoId)).thenReturn(tipoUniforme);
+        when(itemLoteRepository.save(any(ItemLote.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<ItemLote> resultado = itemLoteService.criarItensParaLote(lote, List.of(item1, item2));
+
+        assertEquals(1, resultado.size());
+        assertEquals(8, resultado.getFirst().getQuantidade());
+        verify(itemLoteRepository, times(1)).save(any(ItemLote.class));
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoSomaDasQuantidadesExcedeOLimiteNoLote() {
+        UUID tipoId = UUID.randomUUID();
+        Lote lote = Lote.builder().id(UUID.randomUUID()).build();
+        RequestItemEntradaDTO item1 = new RequestItemEntradaDTO(tipoId, Tamanho.M, Sexo.MASCULINO, Integer.MAX_VALUE);
+        RequestItemEntradaDTO item2 = new RequestItemEntradaDTO(tipoId, Tamanho.M, Sexo.MASCULINO, 1);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> itemLoteService.criarItensParaLote(lote, List.of(item1, item2)));
 
-        assertEquals("Item duplicado no lote: mesmo tipo de uniforme, tamanho e sexo informados mais de uma vez", exception.getMessage());
+        assertEquals("Quantidade total do item excede o limite permitido", exception.getMessage());
         verify(itemLoteRepository, never()).save(any());
     }
 

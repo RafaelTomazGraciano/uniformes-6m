@@ -37,18 +37,19 @@ public class ItemLoteService {
 
     @Transactional
     public List<ItemLote> criarItensParaLote(Lote lote, List<RequestItemEntradaDTO> itensDto) {
-        validarItensSemDuplicidade(itensDto);
+        Map<ChaveItemLote, Integer> quantidadePorItem = consolidarItens(itensDto);
 
         List<ItemLote> itens = new ArrayList<>();
-        for (RequestItemEntradaDTO itemDto : itensDto) {
-            TipoUniforme tipoUniforme = tipoUniformeService.buscarTipoUniformeEntidade(itemDto.tipoUniformeId());
+        for (Map.Entry<ChaveItemLote, Integer> entrada : quantidadePorItem.entrySet()) {
+            ChaveItemLote chave = entrada.getKey();
+            TipoUniforme tipoUniforme = tipoUniformeService.buscarTipoUniformeEntidade(chave.tipoUniformeId());
 
             ItemLote itemLote = ItemLote.builder()
                     .tipoUniforme(tipoUniforme)
                     .lote(lote)
-                    .tamanho(itemDto.tamanho())
-                    .sexo(itemDto.sexo())
-                    .quantidade(itemDto.quantidade())
+                    .tamanho(chave.tamanho())
+                    .sexo(chave.sexo())
+                    .quantidade(entrada.getValue())
                     .build();
 
             itens.add(itemLoteRepository.save(itemLote));
@@ -83,13 +84,20 @@ public class ItemLoteService {
                 .orElseThrow(() -> new NotFoundException("Item de lote não encontrado com o ID: " + id));
     }
 
-    private void validarItensSemDuplicidade(List<RequestItemEntradaDTO> itensDto) {
-        Set<String> combinacoesVistas = new HashSet<>();
+    private Map<ChaveItemLote, Integer> consolidarItens(List<RequestItemEntradaDTO> itensDto) {
+        Map<ChaveItemLote, Integer> consolidado = new LinkedHashMap<>();
         for (RequestItemEntradaDTO item : itensDto) {
-            String chave = item.tipoUniformeId() + "|" + item.tamanho() + "|" + item.sexo();
-            if (!combinacoesVistas.add(chave)) {
-                throw new BadRequestException("Item duplicado no lote: mesmo tipo de uniforme, tamanho e sexo informados mais de uma vez");
-            }
+            ChaveItemLote chave = new ChaveItemLote(item.tipoUniformeId(), item.tamanho(), item.sexo());
+            consolidado.merge(chave, item.quantidade(), this::somarQuantidades);
+        }
+        return consolidado;
+    }
+
+    private Integer somarQuantidades(Integer a, Integer b) {
+        try {
+            return Math.addExact(a, b);
+        } catch (ArithmeticException e) {
+            throw new BadRequestException("Quantidade total do item excede o limite permitido");
         }
     }
 

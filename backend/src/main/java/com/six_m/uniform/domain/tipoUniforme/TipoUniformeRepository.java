@@ -7,4 +7,6 @@ import java.util.UUID;
 
 @Repository
 public interface TipoUniformeRepository extends JpaRepository<TipoUniforme, UUID> {
+    boolean existsByTipoIgnoreCase(String tipo);
+    boolean existsByTipoIgnoreCaseAndIdNot(String tipo, UUID id);
 }

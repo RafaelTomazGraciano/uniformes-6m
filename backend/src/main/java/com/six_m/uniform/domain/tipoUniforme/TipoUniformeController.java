@@ -34,7 +34,7 @@ public class TipoUniformeController {
     @Operation(summary = "Criar tipo de uniforme")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Tipo de uniforme criado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou já existe um tipo de uniforme com este nome"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
     })
     public ResponseEntity<ResponseTipoUniformeDTO> criarTipoUniforme(@Valid @RequestBody RequestCriarTipoUniformeDTO request) {
@@ -68,7 +68,7 @@ public class TipoUniformeController {
     @Operation(summary = "Atualizar tipo de uniforme")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Tipo de uniforme atualizado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou já existe um tipo de uniforme com este nome"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
             @ApiResponse(responseCode = "404", description = "Tipo de uniforme não encontrado")
     })

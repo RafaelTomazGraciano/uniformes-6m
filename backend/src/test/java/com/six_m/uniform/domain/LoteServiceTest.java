@@ -19,6 +19,7 @@ import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -133,7 +134,7 @@ public class LoteServiceTest {
     }
 
     @Test
-    void deveAtualizarLoteEstornandoItensAntigosEDandoEntradaNosNovos() {
+    void deveAtualizarLoteDandoEntradaNosNovosAntesDeEstornarOsAntigos() {
         UUID loteId = UUID.randomUUID();
         NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
         Lote loteExistente = Lote.builder().id(loteId).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
@@ -160,10 +161,37 @@ public class LoteServiceTest {
 
         ResponseLoteDTO response = loteService.atualizarLote(loteId, dto);
 
-        verify(uniformeService).estornarEntrada(tipoUniforme.getId(), Tamanho.M, Sexo.MASCULINO, 5);
+        InOrder ordem = inOrder(uniformeService);
+        ordem.verify(uniformeService).darEntrada(tipoUniforme.getId(), Tamanho.G, Sexo.FEMININO, 8);
+        ordem.verify(uniformeService).estornarEntrada(tipoUniforme.getId(), Tamanho.M, Sexo.MASCULINO, 5);
         verify(itemLoteService).deletarItensPorLote(List.of(itemAntigo));
-        verify(uniformeService).darEntrada(tipoUniforme.getId(), Tamanho.G, Sexo.FEMININO, 8);
         assertEquals("Fornecedor Atualizado", response.fornecedor());
+    }
+
+    @Test
+    void deveInterromperAtualizacaoQuandoEstornoDoItemAntigoFalhar() {
+        UUID loteId = UUID.randomUUID();
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
+        Lote loteExistente = Lote.builder().id(loteId).notaFiscal(notaFiscal).fornecedor("Fornecedor A").build();
+
+        TipoUniforme tipoUniforme = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        ItemLote itemAntigo = ItemLote.builder().id(UUID.randomUUID()).tipoUniforme(tipoUniforme).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(10).build();
+        ItemLote itemNovo = ItemLote.builder().id(UUID.randomUUID()).tipoUniforme(tipoUniforme).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(5).build();
+
+        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO("chave-1", "Fornecedor A", null,
+                List.of(new RequestItemEntradaDTO(tipoUniforme.getId(), Tamanho.M, Sexo.MASCULINO, 5)));
+
+        when(loteRepository.findById(loteId)).thenReturn(Optional.of(loteExistente));
+        when(notaFiscalService.atualizarParaLote(notaFiscal, "chave-1")).thenReturn(notaFiscal);
+        when(itemLoteService.buscarItensPorLote(loteId)).thenReturn(List.of(itemAntigo));
+        when(itemLoteService.criarItensParaLote(loteExistente, dto.itens())).thenReturn(List.of(itemNovo));
+        doThrow(new BadRequestException("Não é possível estornar a entrada"))
+                .when(uniformeService).estornarEntrada(tipoUniforme.getId(), Tamanho.M, Sexo.MASCULINO, 10);
+
+        assertThrows(BadRequestException.class, () -> loteService.atualizarLote(loteId, dto));
+
+        verify(itemLoteService, never()).deletarItensPorLote(any());
+        verify(loteRepository, never()).save(any());
     }
 
     @Test
@@ -176,19 +204,5 @@ public class LoteServiceTest {
         assertThrows(NotFoundException.class, () -> loteService.atualizarLote(loteId, dto));
         verify(notaFiscalService, never()).atualizarParaLote(any(), any());
         verify(itemLoteService, never()).buscarItensPorLote(any());
-    }
-
-    @Test
-    void devePropagarExcecaoDeItemDuplicadoAoCriarLote() {
-        RequestItemEntradaDTO item1 = new RequestItemEntradaDTO(UUID.randomUUID(), Tamanho.M, Sexo.MASCULINO, 5);
-        RequestCriarLoteDTO dto = new RequestCriarLoteDTO("chave-1", "Fornecedor A", null, List.of(item1, item1));
-
-        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
-        when(notaFiscalService.criarParaLote("chave-1")).thenReturn(notaFiscal);
-        when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(itemLoteService.criarItensParaLote(any(Lote.class), eq(dto.itens())))
-                .thenThrow(new BadRequestException("Item duplicado no lote: mesmo tipo de uniforme, tamanho e sexo informados mais de uma vez"));
-
-        assertThrows(BadRequestException.class, () -> loteService.criarLote(dto));
     }
 }

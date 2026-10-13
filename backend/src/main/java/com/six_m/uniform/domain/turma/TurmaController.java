@@ -34,7 +34,7 @@ public class TurmaController {
     @Operation(summary = "Criar turma", description = "Cadastra uma nova turma")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Turma criada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou uma turma com este nome"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
     })
     public ResponseEntity<ResponseTurmaDTO> criarTurma(@Valid @RequestBody RequestCriarTurmaDTO request) {
@@ -68,7 +68,7 @@ public class TurmaController {
     @Operation(summary = "Atualizar turma", description = "Atualiza nome, turno e ensino de uma turma existente")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Turma atualizada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou uma turma com este nome"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado"),
             @ApiResponse(responseCode = "404", description = "Turma não encontrada")
     })

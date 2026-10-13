@@ -24,8 +24,14 @@ public class TurmaService {
 
     @Transactional
     public ResponseTurmaDTO criarTurma(RequestCriarTurmaDTO dto) {
+        String nome = dto.nome().trim();
+
+        if (turmaRepository.existsByNomeIgnoreCase(nome)) {
+            throw new BadRequestException("Já existe uma turma com este nome");
+        }
+
         Turma turma = Turma.builder()
-                .nome(dto.nome())
+                .nome(nome)
                 .turno(dto.turno())
                 .ensino(dto.ensino())
                 .build();
@@ -49,8 +55,13 @@ public class TurmaService {
     @Transactional
     public ResponseTurmaDTO atualizarTurma(UUID id, RequestAtualizarTurmaDTO dto) {
         Turma turma = buscarTurmaOuFalhar(id);
+        String nome = dto.nome().trim();
 
-        turma.setNome(dto.nome());
+        if (turmaRepository.existsByNomeIgnoreCaseAndIdNot(nome, id)) {
+            throw new BadRequestException("Já existe uma turma com este nome");
+        }
+
+        turma.setNome(nome);
         turma.setTurno(dto.turno());
         turma.setEnsino(dto.ensino());
 

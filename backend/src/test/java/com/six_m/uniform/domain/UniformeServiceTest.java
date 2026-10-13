@@ -150,6 +150,21 @@ public class UniformeServiceTest {
     }
 
     @Test
+    void deveLancarExcecaoAoEstornarEntradaQuandoEstoqueAtualEMenorQueAQuantidade() {
+        UUID tipoId = UUID.randomUUID();
+        Uniforme existente = Uniforme.builder().id(UUID.randomUUID()).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(2).build();
+
+        when(uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(tipoId, Tamanho.M, Sexo.MASCULINO))
+                .thenReturn(Optional.of(existente));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> uniformeService.estornarEntrada(tipoId, Tamanho.M, Sexo.MASCULINO, 10));
+
+        assertEquals("Não é possível estornar a entrada: o estoque ficaria negativo, pois parte das unidades já saiu em pedidos", exception.getMessage());
+        verify(uniformeRepository, never()).save(any());
+    }
+
+    @Test
     void deveDarSaidaComSucessoQuandoHaEstoqueSuficiente() {
         UUID uniformeId = UUID.randomUUID();
         Uniforme uniforme = Uniforme.builder().id(uniformeId).quantidade(10).build();
