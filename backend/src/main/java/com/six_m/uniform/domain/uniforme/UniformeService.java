@@ -101,7 +101,9 @@ public class UniformeService {
                 uniforme.getTipoUniforme().getTipo(),
                 uniforme.getTamanho(),
                 uniforme.getQuantidade(),
-                uniforme.getSexo()
+                uniforme.getSexo(),
+                uniforme.getTipoUniforme().getEstoqueBaixo(),
+                uniforme.estaComEstoqueBaixo()
         );
     }
 }

@@ -34,6 +34,7 @@ public class TipoUniformeService {
 
         TipoUniforme tipoUniforme = TipoUniforme.builder()
                 .tipo(tipo)
+                .estoqueBaixo(dto.estoqueBaixo())
                 .build();
 
         tipoUniforme = tipoUniformeRepository.save(tipoUniforme);
@@ -62,6 +63,7 @@ public class TipoUniformeService {
         }
 
         tipoUniforme.setTipo(tipo);
+        tipoUniforme.setEstoqueBaixo(dto.estoqueBaixo());
 
         tipoUniforme = tipoUniformeRepository.save(tipoUniforme);
 
@@ -91,6 +93,6 @@ public class TipoUniformeService {
     }
 
     private ResponseTipoUniformeDTO toResponseDTO(TipoUniforme tipoUniforme) {
-        return new ResponseTipoUniformeDTO(tipoUniforme.getId(), tipoUniforme.getTipo());
+        return new ResponseTipoUniformeDTO(tipoUniforme.getId(), tipoUniforme.getTipo(), tipoUniforme.getEstoqueBaixo());
     }
 }

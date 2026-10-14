@@ -11,6 +11,8 @@ public record ResponseUniformeDTO(
         String tipoUniformeNome,
         Tamanho tamanho,
         Integer quantidade,
-        Sexo sexo
+        Sexo sexo,
+        Integer estoqueBaixo,
+        boolean estoqueBaixoAlerta
 ) {
 }

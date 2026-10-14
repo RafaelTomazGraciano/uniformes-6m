@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record ResponseTipoUniformeDTO(
         UUID id,
-        String tipo
+        String tipo,
+        Integer estoqueBaixo
 ) {
 }

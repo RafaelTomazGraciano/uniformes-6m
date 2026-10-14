@@ -57,7 +57,7 @@ class FluxoCompletoIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> response = rest.postForEntity(
                 baseUrl() + "/tipo-uniforme",
                 requisicao("""
-                        {"tipo":"Camiseta"}
+                        {"tipo":"Camiseta", "estoqueBaixo":10}
                         """, token),
                 String.class);
 
@@ -143,9 +143,12 @@ class FluxoCompletoIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> uniformeResponse = rest.exchange(
                 baseUrl() + "/uniforme/" + uniformeId, HttpMethod.GET, entidade, String.class);
 
+
         assertThat(uniformeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        int quantidadeAtual = objectMapper.readTree(uniformeResponse.getBody()).get("quantidade").asInt();
-        assertThat(quantidadeAtual).isEqualTo(15); // 20 (entrada) - 5 (saída)
+        JsonNode uniforme = objectMapper.readTree(uniformeResponse.getBody());
+        assertThat(uniforme.get("quantidade").asInt()).isEqualTo(15);
+        assertThat(uniforme.get("estoqueBaixo").asInt()).isEqualTo(10);
+        assertThat(uniforme.get("estoqueBaixoAlerta").asBoolean()).isFalse();
     }
 
     @Test

@@ -41,7 +41,7 @@ public class UniformeServiceTest {
 
     @Test
     void deveBuscarTodosUniformesPaginado() {
-        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
         Uniforme uniforme1 = Uniforme.builder().id(UUID.randomUUID()).tipoUniforme(tipo).tamanho(Tamanho.P).quantidade(3).sexo(Sexo.MASCULINO).build();
         Uniforme uniforme2 = Uniforme.builder().id(UUID.randomUUID()).tipoUniforme(tipo).tamanho(Tamanho.G).quantidade(7).sexo(Sexo.FEMININO).build();
 
@@ -54,6 +54,8 @@ public class UniformeServiceTest {
         assertEquals(2, resultado.getTotalElements());
         assertEquals(Tamanho.P, resultado.getContent().get(0).tamanho());
         assertEquals(Tamanho.G, resultado.getContent().get(1).tamanho());
+        assertEquals(10, resultado.getContent().get(0).estoqueBaixo());
+        assertEquals(10, resultado.getContent().get(1).estoqueBaixo());
     }
 
     @Test
@@ -70,7 +72,7 @@ public class UniformeServiceTest {
     @Test
     void deveBuscarUniformePorId() {
         UUID id = UUID.randomUUID();
-        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
         Uniforme uniforme = Uniforme.builder().id(id).tipoUniforme(tipo).tamanho(Tamanho.M).quantidade(10).sexo(Sexo.MASCULINO).build();
 
         when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniforme));
@@ -79,6 +81,7 @@ public class UniformeServiceTest {
 
         assertEquals(id, response.id());
         assertEquals(Tamanho.M, response.tamanho());
+        assertEquals(10, response.estoqueBaixo());
     }
 
     @Test
@@ -248,4 +251,43 @@ public class UniformeServiceTest {
 
         assertTrue(resultado.isEmpty());
     }
+
+    @Test
+    void deveMarcarAlertaQuandoQuantidadeEstaAbaixoDoMinimo() {
+        UUID id = UUID.randomUUID();
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
+        Uniforme uniforme = Uniforme.builder().id(id).tipoUniforme(tipo).tamanho(Tamanho.P).sexo(Sexo.FEMININO).quantidade(9).build();
+
+        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniforme));
+
+        ResponseUniformeDTO response = uniformeService.buscarUniforme(id);
+
+        assertEquals(10, response.estoqueBaixo());
+        assertTrue(response.estoqueBaixoAlerta());
+    }
+
+    @Test
+    void naoDeveMarcarAlertaQuandoQuantidadeEstaAcimaDoMinimo() {
+        UUID id = UUID.randomUUID();
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
+        Uniforme uniforme = Uniforme.builder().id(id).tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(11).build();
+
+        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniforme));
+
+        assertFalse(uniformeService.buscarUniforme(id).estoqueBaixoAlerta());
+    }
+    @Test
+    void deveMarcarAlertaQuandoQuantidadeEIgualAoMinimo() {
+        UUID id = UUID.randomUUID();
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
+        Uniforme uniforme = Uniforme.builder().id(id).tipoUniforme(tipo).tamanho(Tamanho.P).sexo(Sexo.FEMININO).quantidade(10).build();
+
+        when(uniformeRepository.findById(id)).thenReturn(Optional.of(uniforme));
+
+        ResponseUniformeDTO response = uniformeService.buscarUniforme(id);
+
+        assertEquals(10, response.estoqueBaixo());
+        assertTrue(response.estoqueBaixoAlerta());
+    }
+
 }

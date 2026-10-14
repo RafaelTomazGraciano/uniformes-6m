@@ -49,7 +49,8 @@ CREATE TABLE "usuario" (
 
 CREATE TABLE "tipo_uniforme" (
                                  "id" uuid PRIMARY KEY DEFAULT (gen_random_uuid()),
-                                 "tipo" varchar(255) NOT NULL
+                                 "tipo" varchar(255) NOT NULL,
+                                 "estoque_baixo" int NOT NULL
 );
 
 CREATE TABLE "uniforme" (
