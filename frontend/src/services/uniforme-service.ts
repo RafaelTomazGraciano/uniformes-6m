@@ -6,7 +6,7 @@ export function listUniformes(pageable: Pageable = {}): Promise<Page<Uniforme>> 
   return apiFetch(`/uniforme${pageableToQuery(pageable)}`)
 }
 
-export function listAllUniformes(): Promise<Uniforme[]> {
+export function listAllUniformes(): Promise<Uniforme[] > {
   return fetchAllPages(listUniformes)
 }
 

@@ -8,19 +8,14 @@ export const itemEntradaSchema = z.object({
 })
 
 export const loteSchema = z.object({
+  /* A NF-e tem 44 dígitos, mas o backend aceita qualquer chave e há lotes antigos
+     fora do padrão: o formulário mostra a contagem em vez de bloquear. */
   chaveAcesso: z.string().trim().min(1, 'Informe a chave de acesso da nota fiscal.'),
   fornecedor: z.string().trim().min(1, 'Informe o fornecedor.'),
   dataEntrega: z.string().min(1, 'Informe a data de entrega.'),
-  itens: z
-    .array(itemEntradaSchema)
-    .min(1, 'Adicione ao menos um item.')
-    /* Repetir tipo+tamanho+sexo somaria duas linhas no mesmo saldo e deixaria a
-       nota impossível de conferir depois. Melhor somar antes de enviar. */
-    .refine(
-      (itens) =>
-        new Set(itens.map((item) => `${item.tipoUniformeId}|${item.tamanho}|${item.sexo}`)).size === itens.length,
-      { message: 'Há itens repetidos: junte a quantidade numa linha só.' },
-    ),
+  /* Linhas repetidas (mesmo tipo, tamanho e sexo) são somadas pelo backend
+     (ItemLoteService.consolidarItens), como na nota com o item em duas linhas. */
+  itens: z.array(itemEntradaSchema).min(1, 'Adicione ao menos um item.'),
 })
 
 export type ItemEntradaFormValues = z.infer<typeof itemEntradaSchema>

@@ -19,7 +19,7 @@ export type Pageable = {
    fixar um `size` grande e parar por aí descarta o excedente em silêncio. */
 const TAMANHO_PAGINA = 100
 
-export async function fetchAllPages<T>(carregar: (pageable: Pageable) => Promise<Page<T>>): Promise<T[]> {
+export async function fetchAllPages<T>(carregar: (pageable: Pageable) => Promise<Page<T>>): Promise<T[] > {
   const primeira = await carregar({ page: 0, size: TAMANHO_PAGINA })
   const itens = [...primeira.content]
 

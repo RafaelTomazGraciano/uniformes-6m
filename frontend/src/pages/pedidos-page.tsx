@@ -1,148 +1,115 @@
-import { useState } from 'react'
-import { Eye, Plus } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { ClipboardList, Plus } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ButtonLink } from '@/components/shared/button-link'
 
 import { AppLayout } from '@/components/layout/app-layout'
-import { NovaEntregaDialog } from '@/components/pedidos/nova-entrega-dialog'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DetalheEntregaSheet } from '@/components/pedidos/detalhe-entrega-sheet'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/components/shared/estados-lista'
+import { Paginacao } from '@/components/shared/paginacao'
+import { ResumoItens } from '@/components/shared/resumo-itens'
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { usePedidosQuery } from '@/hooks/use-pedidos'
-import { sexoLabels } from '@/lib/labels'
-import type { Pedido } from '@/lib/types/pedido'
+import { formatarDataHora } from '@/lib/format'
 
-function formatDataEfetivada(value: string) {
-  return new Date(value).toLocaleString('pt-BR')
-}
+const POR_PAGINA = 20
 
 export function PedidosPage() {
-  const [page, setPage] = useState(0)
-  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('pagina') ?? 0) || 0
+  const verId = searchParams.get('ver')
 
-  const { data, isLoading, isError } = usePedidosQuery({ page })
+  const { data, isLoading, isError, refetch } = usePedidosQuery({ page, size: POR_PAGINA })
 
-  // ?nova=1 abre o diálogo: o botão da visão geral continua levando direto ao formulário.
-  const novaEntregaAberta = searchParams.get('nova') === '1'
-
-  function definirNovaEntregaAberta(aberta: boolean) {
-    setSearchParams(
-      (atual) => {
-        const proximos = new URLSearchParams(atual)
-        if (aberta) proximos.set('nova', '1')
-        else proximos.delete('nova')
-        return proximos
-      },
-      { replace: true },
-    )
+  function atualizarParams(mudar: (params: URLSearchParams) => void) {
+    setSearchParams((atual) => {
+      const params = new URLSearchParams(atual)
+      mudar(params)
+      return params
+    })
   }
+
+  const novaEntrega = (
+    <ButtonLink size="lg" to="/pedidos/nova">
+      <Plus aria-hidden />
+      Nova entrega
+    </ButtonLink>
+  )
 
   return (
     <AppLayout
       title="Entregas"
       description="Todo uniforme que saiu do almoxarifado, do mais recente ao mais antigo."
-      headerActions={
-        <Button onClick={() => definirNovaEntregaAberta(true)}>
-          <Plus className="size-4" />
-          Nova entrega
-        </Button>
-      }
+      count={data?.totalElements}
+      headerActions={novaEntrega}
     >
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Aluno</TableHead>
-              <TableHead>Responsável</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead className="text-right">Itens</TableHead>
-              <TableHead className="w-16 text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell colSpan={5}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
+      {isLoading && <EstadoCarregando rotulo="Carregando entregas" colunas={4} />}
+      {isError && <EstadoErro titulo="Não foi possível carregar as entregas" onRetry={() => refetch()} />}
 
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-destructive">
-                  Não foi possível carregar as entregas. Tente novamente mais tarde.
-                </TableCell>
-              </TableRow>
-            )}
-
-            {!isLoading && !isError && data?.content.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhuma entrega registrada ainda.
-                </TableCell>
-              </TableRow>
-            )}
-
-            {data?.content.map((pedido) => (
-              <TableRow key={pedido.id}>
-                <TableCell>{pedido.alunoNome}</TableCell>
-                <TableCell>{pedido.usuarioNome}</TableCell>
-                <TableCell>{formatDataEfetivada(pedido.dataEfetivada)}</TableCell>
-                <TableCell className="text-right">{pedido.itens.length}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon-sm" onClick={() => setSelectedPedido(pedido)}>
-                    <Eye className="size-4" />
-                    <span className="sr-only">Ver itens</span>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {data && data.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Página {data.number + 1} de {data.totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={data.first} onClick={() => setPage((p) => p - 1)}>
-              Anterior
-            </Button>
-            <Button variant="outline" size="sm" disabled={data.last} onClick={() => setPage((p) => p + 1)}>
-              Próxima
-            </Button>
-          </div>
-        </div>
+      {data && data.totalElements === 0 && (
+        <EstadoVazio
+          icone={<ClipboardList />}
+          titulo="Nenhuma entrega registrada"
+          descricao="Cada uniforme entregue a um aluno aparece aqui, com quem registrou e quando."
+          acao={novaEntrega}
+        />
       )}
 
-      <NovaEntregaDialog open={novaEntregaAberta} onOpenChange={definirNovaEntregaAberta} />
-
-      <Dialog open={Boolean(selectedPedido)} onOpenChange={(open) => !open && setSelectedPedido(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Itens da entrega</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-2">
-            {selectedPedido?.itens.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-              >
-                <span>
-                  {item.uniformeTipoUniformeNome} — {item.uniformeTamanho} — {sexoLabels[item.uniformeSexo]}
-                </span>
-                <span className="font-medium">x{item.quantidade}</span>
-              </div>
-            ))}
+      {data && data.totalElements > 0 && (
+        <>
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <Table>
+              <TableCaption className="sr-only">Entregas de uniforme, da mais recente para a mais antiga</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">Aluno</TableHead>
+                  <TableHead scope="col">Peças</TableHead>
+                  <TableHead scope="col">Responsável</TableHead>
+                  <TableHead scope="col">Data</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.content.map((pedido) => (
+                  <TableRow key={pedido.id} data-state={pedido.id === verId ? 'selected' : undefined}>
+                    <TableCell className="font-medium">
+                      <Link
+                        to={`?${new URLSearchParams({ ...Object.fromEntries(searchParams), ver: pedido.id })}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {pedido.alunoNome}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <ResumoItens
+                        itens={pedido.itens.map((item) => ({
+                          chave: item.id,
+                          nome: item.uniformeTipoUniformeNome,
+                          tamanho: item.uniformeTamanho,
+                          quantidade: item.quantidade,
+                        }))}
+                      />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{pedido.usuarioNome}</TableCell>
+                    <TableCell className="whitespace-nowrap" data-numeric>
+                      {formatarDataHora(pedido.dataEfetivada)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          <Paginacao
+            pagina={data.number}
+            totalPaginas={data.totalPages}
+            totalItens={data.totalElements}
+            porPagina={POR_PAGINA}
+            rotuloItens={['entrega', 'entregas']}
+            onChange={(proxima) => atualizarParams((params) => params.set('pagina', String(proxima)))}
+          />
+        </>
+      )}
+
+      <DetalheEntregaSheet pedidoId={verId} onClose={() => atualizarParams((params) => params.delete('ver'))} />
     </AppLayout>
   )
 }

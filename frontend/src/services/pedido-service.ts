@@ -3,8 +3,13 @@ import { paraLocalDateTime } from '@/lib/format'
 import type { CriarPedidoPayload, Pedido } from '@/lib/types/pedido'
 import { pageableToQuery, type Page, type Pageable } from '@/lib/types/page'
 
-export function listPedidos(pageable: Pageable = { sort: 'dataEfetivada,desc' }): Promise<Page<Pedido>> {
-  return apiFetch(`/pedido${pageableToQuery(pageable)}`)
+export function listPedidos(
+  pageable: Pageable = { sort: 'dataEfetivada,desc' },
+  filtro: { alunoId?: string } = {},
+): Promise<Page<Pedido>> {
+  const query = pageableToQuery(pageable)
+  const aluno = filtro.alunoId ? `${query ? '&' : '?'}alunoId=${encodeURIComponent(filtro.alunoId)}` : ''
+  return apiFetch(`/pedido${query}${aluno}`)
 }
 
 export function getPedido(id: string): Promise<Pedido> {

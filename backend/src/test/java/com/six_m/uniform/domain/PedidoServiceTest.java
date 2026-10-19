@@ -136,9 +136,26 @@ public class PedidoServiceTest {
         when(pedidoRepository.findAll(pageable))
                 .thenReturn(new PageImpl<>(List.of(pedido1, pedido2), pageable, 2));
 
-        var resultado = pedidoService.buscarTodosPedidos(pageable);
+        var resultado = pedidoService.buscarTodosPedidos(null, pageable);
 
         assertEquals(2, resultado.getTotalElements());
+    }
+
+    @Test
+    void deveFiltrarPedidosPorAluno() {
+        Aluno aluno = Aluno.builder().id(UUID.randomUUID()).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").email("rafael@teste.com").build();
+        Pedido pedido = Pedido.builder().id(UUID.randomUUID()).aluno(aluno).usuario(usuario).build();
+
+        Pageable pageable = PageRequest.of(0, 10);
+        when(pedidoRepository.findByAlunoId(aluno.getId(), pageable))
+                .thenReturn(new PageImpl<>(List.of(pedido), pageable, 1));
+
+        var resultado = pedidoService.buscarTodosPedidos(aluno.getId(), pageable);
+
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(aluno.getId(), resultado.getContent().get(0).alunoId());
+        verify(pedidoRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
@@ -147,7 +164,7 @@ public class PedidoServiceTest {
         when(pedidoRepository.findAll(pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        var resultado = pedidoService.buscarTodosPedidos(pageable);
+        var resultado = pedidoService.buscarTodosPedidos(null, pageable);
 
         assertTrue(resultado.isEmpty());
     }
@@ -242,7 +259,7 @@ public class PedidoServiceTest {
         when(pedidoRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(pedido), pageable, 1));
         when(pedidoUniformeService.buscarItensPorPedidos(List.of(pedidoId))).thenReturn(Map.of(pedidoId, List.of(item)));
 
-        var resultado = pedidoService.buscarTodosPedidos(pageable);
+        var resultado = pedidoService.buscarTodosPedidos(null, pageable);
 
         assertEquals(1, resultado.getTotalElements());
         assertEquals(1, resultado.getContent().getFirst().itens().size());

@@ -7,7 +7,16 @@ import { createPedido, getPedido, listPedidos } from '@/services/pedido-service'
 export function usePedidosQuery(pageable: Pageable = {}) {
   return useQuery({
     queryKey: ['pedidos', 'list', pageable],
-    queryFn: () => listPedidos(pageable),
+    queryFn: () => listPedidos({ sort: 'dataEfetivada,desc', ...pageable }),
+  })
+}
+
+/** Histórico de um aluno, do mais recente ao mais antigo. */
+export function usePedidosDoAlunoQuery(alunoId: string | undefined) {
+  return useQuery({
+    queryKey: ['pedidos', 'aluno', alunoId],
+    queryFn: () => listPedidos({ sort: 'dataEfetivada,desc', size: 50 }, { alunoId }),
+    enabled: Boolean(alunoId),
   })
 }
 

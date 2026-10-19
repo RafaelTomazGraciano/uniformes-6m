@@ -1,21 +1,27 @@
+import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { Navigate, RouterProvider, createBrowserRouter, type RouteObject } from 'react-router-dom'
 
 import { ProtectedRoute } from '@/components/auth/protected-route'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AlunoFormPage } from '@/pages/aluno-form-page'
 import { AlunosPage } from '@/pages/alunos-page'
 import { ContaPage } from '@/pages/conta-page'
 import { DashboardPage } from '@/pages/dashboard-page'
+import { EntradaFormPage } from '@/pages/entrada-form-page'
 import { EntradasPage } from '@/pages/entradas-page'
 import { EstoquePage } from '@/pages/estoque-page'
 import { LoginPage } from '@/pages/login-page'
 import { NotFoundPage } from '@/pages/not-found-page'
+import { NovaEntregaPage } from '@/pages/nova-entrega-page'
 import { PedidosPage } from '@/pages/pedidos-page'
 import { RegisterPage } from '@/pages/register-page'
 import { RelatoriosPage } from '@/pages/relatorios-page'
-import { TrocarSenhaPage } from '@/pages/trocar-senha-page'
+import { TipoUniformeFormPage } from '@/pages/tipo-uniforme-form-page'
 import { TiposUniformePage } from '@/pages/tipos-uniforme-page'
+import { TrocarSenhaPage } from '@/pages/trocar-senha-page'
+import { TurmaFormPage } from '@/pages/turma-form-page'
 import { TurmasPage } from '@/pages/turmas-page'
 
 const queryClient = new QueryClient({
@@ -27,119 +33,42 @@ const queryClient = new QueryClient({
   },
 })
 
+function protegida(path: string, element: ReactNode): RouteObject {
+  return { path, element: <ProtectedRoute>{element}</ProtectedRoute>, errorElement: <NotFoundPage /> }
+}
+
 const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Navigate to="/login" replace />,
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/login',
-    element: <LoginPage />,
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/register',
-    element: <RegisterPage />,
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/dashboard',
-    element: (
-      <ProtectedRoute>
-        <DashboardPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/alunos',
-    element: (
-      <ProtectedRoute>
-        <AlunosPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/pedidos',
-    element: (
-      <ProtectedRoute>
-        <PedidosPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    // A entrega virou diálogo dentro de Entregas; o link antigo continua funcionando.
-    path: '/requisicoes/nova',
-    element: <Navigate to="/pedidos?nova=1" replace />,
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/estoque',
-    element: (
-      <ProtectedRoute>
-        <EstoquePage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/entradas',
-    element: (
-      <ProtectedRoute>
-        <EntradasPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/turmas',
-    element: (
-      <ProtectedRoute>
-        <TurmasPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/tipos-uniforme',
-    element: (
-      <ProtectedRoute>
-        <TiposUniformePage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/relatorios',
-    element: (
-      <ProtectedRoute>
-        <RelatoriosPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '/conta',
-    element: (
-      <ProtectedRoute>
-        <ContaPage />
-      </ProtectedRoute>
-    ),
-    errorElement: <NotFoundPage />,
-  },
-  {
-    // Pública: é também o caminho de quem esqueceu a senha e não consegue entrar.
-    path: '/trocar-senha',
-    element: <TrocarSenhaPage />,
-    errorElement: <NotFoundPage />,
-  },
-  {
-    path: '*',
-    element: <NotFoundPage />,
-  },
+  { path: '/', element: <Navigate to="/login" replace />, errorElement: <NotFoundPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <NotFoundPage /> },
+  { path: '/register', element: <RegisterPage />, errorElement: <NotFoundPage /> },
+  // Pública: é também o caminho de quem esqueceu a senha e não consegue entrar.
+  { path: '/trocar-senha', element: <TrocarSenhaPage />, errorElement: <NotFoundPage /> },
+
+  protegida('/dashboard', <DashboardPage />),
+
+  // Cadastros e edições são páginas inteiras; o detalhe abre num painel sobre a lista (?ver=id).
+  protegida('/pedidos', <PedidosPage />),
+  protegida('/pedidos/nova', <NovaEntregaPage />),
+  protegida('/entradas', <EntradasPage />),
+  protegida('/entradas/nova', <EntradaFormPage />),
+  protegida('/entradas/:id/editar', <EntradaFormPage />),
+  protegida('/estoque', <EstoquePage />),
+  protegida('/alunos', <AlunosPage />),
+  protegida('/alunos/novo', <AlunoFormPage />),
+  protegida('/alunos/:id/editar', <AlunoFormPage />),
+  protegida('/turmas', <TurmasPage />),
+  protegida('/turmas/nova', <TurmaFormPage />),
+  protegida('/turmas/:id/editar', <TurmaFormPage />),
+  protegida('/tipos-uniforme', <TiposUniformePage />),
+  protegida('/tipos-uniforme/novo', <TipoUniformeFormPage />),
+  protegida('/tipos-uniforme/:id/editar', <TipoUniformeFormPage />),
+  protegida('/relatorios', <RelatoriosPage />),
+  protegida('/conta', <ContaPage />),
+
+  // Links antigos continuam funcionando.
+  { path: '/requisicoes/nova', element: <Navigate to="/pedidos/nova" replace /> },
+
+  { path: '*', element: <NotFoundPage /> },
 ])
 
 export default function App() {

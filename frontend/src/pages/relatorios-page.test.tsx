@@ -17,8 +17,8 @@ import { toast } from 'sonner'
 
 const pdf = new Blob(['%PDF'], { type: 'application/pdf' })
 
-const turmaA = { id: 't1', nome: '9º Ano A', turno: 'DIURNO' as const, ensino: 'FUNDAMENTAL' as const }
-const turmaB = { id: 't2', nome: '6º Ano B', turno: 'VESPERTINO' as const, ensino: 'FUNDAMENTAL' as const }
+const turmaA = { id: 't1', nome: '9º Ano A', turno: 'DIURNO' as const, ensino: 'FUNDAMENTAL' as const, quantidadeAlunos: 0 }
+const turmaB = { id: 't2', nome: '6º Ano B', turno: 'VESPERTINO' as const, ensino: 'FUNDAMENTAL' as const, quantidadeAlunos: 0 }
 
 function cardDe(titulo: string) {
   /* Ancorar no título evita pegar o card vizinho. Pelo heading, e não pelo

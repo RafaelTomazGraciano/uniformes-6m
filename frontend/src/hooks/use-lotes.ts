@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { AtualizarLotePayload, CriarLotePayload } from '@/lib/types/lote'
 import type { Pageable } from '@/lib/types/page'
-import { createLote, listLotes, updateLote } from '@/services/lote-service'
+import { createLote, getLote, listLotes, updateLote } from '@/services/lote-service'
 
 /** Entrada de lote é o que faz o saldo subir: tudo que lê estoque precisa recarregar. */
 function invalidarEstoque(queryClient: ReturnType<typeof useQueryClient>) {
@@ -15,6 +15,14 @@ export function useLotesQuery(pageable: Pageable = {}) {
   return useQuery({
     queryKey: ['lotes', 'list', pageable],
     queryFn: () => listLotes({ sort: 'dataEntrega,desc', ...pageable }),
+  })
+}
+
+export function useLoteQuery(id: string | undefined) {
+  return useQuery({
+    queryKey: ['lotes', 'detail', id],
+    queryFn: () => getLote(id as string),
+    enabled: Boolean(id),
   })
 }
 

@@ -1,53 +1,68 @@
-import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Boxes, PackagePlus, Pencil, Plus, Shirt, Trash2 } from 'lucide-react'
+import { ButtonLink } from '@/components/shared/button-link'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { AppLayout } from '@/components/layout/app-layout'
-import { TipoUniformeFormDialog } from '@/components/tipos-uniforme/tipo-uniforme-form-dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AcoesLinha } from '@/components/shared/acoes-linha'
+import { ConfirmarExclusao } from '@/components/shared/confirmar-exclusao'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/components/shared/estados-lista'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useDeleteTipoUniformeMutation, useTiposUniformeQuery } from '@/hooks/use-tipos-uniforme'
+import { useAllUniformesQuery } from '@/hooks/use-uniformes'
+import { nivelDoUniforme, TAMANHOS } from '@/lib/estoque'
 import type { TipoUniforme } from '@/lib/types/tipo-uniforme'
+import { cn } from '@/lib/utils'
+
+type ResumoTipo = { pecas: number; baixos: number; esgotados: number; porTamanho: number[]; alertaPorTamanho: boolean[] }
 
 export function TiposUniformePage() {
-  const [formAberto, setFormAberto] = useState(false)
-  const [emEdicao, setEmEdicao] = useState<TipoUniforme | undefined>(undefined)
-  const [emExclusao, setEmExclusao] = useState<TipoUniforme | null>(null)
-
-  const { data: tipos, isLoading, isError } = useTiposUniformeQuery()
+  const navigate = useNavigate()
+  const tipos = useTiposUniformeQuery()
+  const uniformes = useAllUniformesQuery()
   const deleteMutation = useDeleteTipoUniformeMutation()
+  const [excluindo, setExcluindo] = useState<TipoUniforme | null>(null)
 
-  function abrirCriacao() {
-    setEmEdicao(undefined)
-    setFormAberto(true)
-  }
+  const resumo = useMemo(() => {
+    const porTipo = new Map<string, ResumoTipo>()
+    for (const uniforme of uniformes.data ?? []) {
+      const atual = porTipo.get(uniforme.tipoUniformeId) ?? {
+        pecas: 0,
+        baixos: 0,
+        esgotados: 0,
+        porTamanho: TAMANHOS.map(() => 0),
+        alertaPorTamanho: TAMANHOS.map(() => false),
+      }
+      const nivel = nivelDoUniforme(uniforme)
+      const indice = TAMANHOS.indexOf(uniforme.tamanho)
+      atual.pecas += uniforme.quantidade
+      atual.porTamanho[indice] += uniforme.quantidade
+      if (nivel !== 'ok') atual.alertaPorTamanho[indice] = true
+      if (nivel === 'baixo') atual.baixos += 1
+      if (nivel === 'esgotado') atual.esgotados += 1
+      porTipo.set(uniforme.tipoUniformeId, atual)
+    }
+    return porTipo
+  }, [uniformes.data])
 
-  function abrirEdicao(tipo: TipoUniforme) {
-    setEmEdicao(tipo)
-    setFormAberto(true)
-  }
+  const maiorTamanho = Math.max(1, ...[...resumo.values()].flatMap((item) => item.porTamanho))
+
+  const novoTipo = (
+    <ButtonLink size="lg" to="/tipos-uniforme/novo">
+      <Plus aria-hidden />
+      Novo tipo
+    </ButtonLink>
+  )
 
   function confirmarExclusao() {
-    if (!emExclusao) return
-
-    deleteMutation.mutate(emExclusao.id, {
+    if (!excluindo) return
+    deleteMutation.mutate(excluindo.id, {
       onSuccess: () => {
-        toast.success('Tipo de uniforme excluído.')
-        setEmExclusao(null)
+        toast.success(`Tipo “${excluindo.tipo}” excluído.`)
+        setExcluindo(null)
       },
-      /* O backend recusa a exclusão quando há uniformes ou itens de lote
-         vinculados; a mensagem dele explica o motivo melhor que um texto fixo. */
       onError: (error: Error) => toast.error(error.message),
     })
   }
@@ -55,88 +70,125 @@ export function TiposUniformePage() {
   return (
     <AppLayout
       title="Tipos de uniforme"
-      description="As peças que a escola distribui. Cada entrada de lote se apoia nesta lista."
-      headerActions={
-        <Button onClick={abrirCriacao}>
-          <Plus className="size-4" />
-          Novo tipo
-        </Button>
-      }
+      description="As peças que a escola distribui e o limite de reposição de cada uma."
+      count={tipos.data?.length}
+      headerActions={novoTipo}
     >
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tipo</TableHead>
-              <TableHead className="w-24 text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 4 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell colSpan={2}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
+      {tipos.isLoading && <EstadoCarregando rotulo="Carregando tipos de uniforme" colunas={5} />}
+      {tipos.isError && <EstadoErro titulo="Não foi possível carregar os tipos" onRetry={() => tipos.refetch()} />}
 
-            {isError && (
+      {tipos.data && tipos.data.length === 0 && (
+        <EstadoVazio
+          icone={<Shirt />}
+          titulo="Nenhum tipo cadastrado"
+          descricao="Sem um tipo não é possível dar entrada em estoque. Comece pela peça mais usada, como a camiseta."
+          acao={novoTipo}
+        />
+      )}
+
+      {tipos.data && tipos.data.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+          <Table className="min-w-[48rem]">
+            <TableCaption className="sr-only">Tipos de uniforme com limite e situação do estoque</TableCaption>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={2} className="text-center text-destructive">
-                  Não foi possível carregar os tipos de uniforme. Tente novamente mais tarde.
-                </TableCell>
+                <TableHead scope="col">Tipo</TableHead>
+                <TableHead scope="col" className="text-right">
+                  Avisar com
+                </TableHead>
+                <TableHead scope="col" className="text-right">
+                  Em estoque
+                </TableHead>
+                <TableHead scope="col">Por tamanho (PP → GG)</TableHead>
+                <TableHead scope="col">Situação</TableHead>
+                <TableHead scope="col" className="w-14">
+                  <span className="sr-only">Ações</span>
+                </TableHead>
               </TableRow>
-            )}
+            </TableHeader>
+            <TableBody>
+              {tipos.data.map((tipo) => {
+                const dados = resumo.get(tipo.id)
+                return (
+                  <TableRow key={tipo.id}>
+                    <TableCell className="font-medium">
+                      <Link to={`/tipos-uniforme/${tipo.id}/editar`} className="underline-offset-4 hover:underline">
+                        {tipo.tipo}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right" data-numeric>
+                      ≤ {tipo.estoqueBaixo}
+                    </TableCell>
+                    <TableCell className="text-right font-medium" data-numeric>
+                      {dados?.pecas ?? 0}
+                    </TableCell>
+                    <TableCell>
+                      {dados ? (
+                        <div className="flex h-7 items-end gap-1" aria-hidden>
+                          {dados.porTamanho.map((quantidade, indice) => (
+                            <span
+                              key={TAMANHOS[indice]}
+                              title={`${TAMANHOS[indice]}: ${quantidade}`}
+                              className={cn(
+                                'w-3.5 rounded-sm bg-primary/35',
+                                dados.alertaPorTamanho[indice] && 'bg-signal-low',
+                                quantidade === 0 && 'bg-signal-out',
+                              )}
+                              style={{ height: `${Math.max(12, (quantidade / maiorTamanho) * 100)}%` }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Nenhuma entrada ainda</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {!dados && <Badge variant="outline">Sem estoque</Badge>}
+                        {dados && dados.baixos === 0 && dados.esgotados === 0 && <Badge variant="ok">Em dia</Badge>}
+                        {dados && dados.baixos > 0 && (
+                          <Badge variant="low">
+                            {dados.baixos} {dados.baixos === 1 ? 'baixo' : 'baixos'}
+                          </Badge>
+                        )}
+                        {dados && dados.esgotados > 0 && (
+                          <Badge variant="out">
+                            {dados.esgotados} {dados.esgotados === 1 ? 'esgotado' : 'esgotados'}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AcoesLinha
+                        rotulo={tipo.tipo}
+                        acoes={[
+                          { label: 'Editar', icone: <Pencil aria-hidden />, onSelect: () => navigate(`/tipos-uniforme/${tipo.id}/editar`) },
+                          { label: 'Ver no estoque', icone: <Boxes aria-hidden />, onSelect: () => navigate('/estoque') },
+                          {
+                            label: 'Nova entrada deste tipo',
+                            icone: <PackagePlus aria-hidden />,
+                            onSelect: () => navigate(`/entradas/nova?tipo=${tipo.id}`),
+                          },
+                          { label: 'Excluir', icone: <Trash2 aria-hidden />, destrutiva: true, onSelect: () => setExcluindo(tipo) },
+                        ]}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
-            {!isLoading && !isError && tipos?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={2} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum tipo cadastrado. Sem um tipo não é possível dar entrada em estoque.
-                </TableCell>
-              </TableRow>
-            )}
-
-            {tipos?.map((tipo) => (
-              <TableRow key={tipo.id}>
-                <TableCell className="font-medium">{tipo.tipo}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon-sm" onClick={() => abrirEdicao(tipo)}>
-                      <Pencil className="size-4" />
-                      <span className="sr-only">Editar {tipo.tipo}</span>
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => setEmExclusao(tipo)}>
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Excluir {tipo.tipo}</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <TipoUniformeFormDialog open={formAberto} onOpenChange={setFormAberto} tipoUniforme={emEdicao} />
-
-      <AlertDialog open={Boolean(emExclusao)} onOpenChange={(aberto) => !aberto && setEmExclusao(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir tipo de uniforme</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir "{emExclusao?.tipo}"? Só é possível se não houver peças nem entradas
-              ligadas a ele.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled={deleteMutation.isPending} onClick={confirmarExclusao}>
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmarExclusao
+        aberto={Boolean(excluindo)}
+        titulo="Excluir tipo de uniforme"
+        descricao={`Excluir “${excluindo?.tipo ?? ''}”? Não é possível excluir um tipo que já tem estoque ou entregas.`}
+        carregando={deleteMutation.isPending}
+        onConfirmar={confirmarExclusao}
+        onCancelar={() => setExcluindo(null)}
+      />
     </AppLayout>
   )
 }

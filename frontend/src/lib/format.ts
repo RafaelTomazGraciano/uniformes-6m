@@ -53,3 +53,25 @@ export function inputParaLocalDateTime(valor: string): string {
 export function hojeParaInput(): string {
   return dataParaInput(paraLocalDateTime(new Date()))
 }
+
+const dataHora = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+
+export function formatarDataHora(valor: string | null | undefined): string {
+  if (!valor) return '—'
+  const data = new Date(valor)
+  return Number.isNaN(data.getTime()) ? '—' : dataHora.format(data)
+}
+
+/** "3526 1012 3456 …": a chave da NF-e em grupos de 4, como impressa no DANFE. */
+export function formatarChaveAcesso(chave: string): string {
+  const digitos = chave.replace(/\D/g, '')
+  return digitos.length ? (digitos.match(/.{1,4}/g) ?? []).join(' ') : chave
+}
+
+/** "(11) 98765-4321" a partir dos dígitos guardados no backend. */
+export function formatarTelefone(digitos: string | null | undefined): string {
+  const limpo = (digitos ?? '').replace(/\D/g, '')
+  if (limpo.length === 11) return `(${limpo.slice(0, 2)}) ${limpo.slice(2, 7)}-${limpo.slice(7)}`
+  if (limpo.length === 10) return `(${limpo.slice(0, 2)}) ${limpo.slice(2, 6)}-${limpo.slice(6)}`
+  return limpo
+}

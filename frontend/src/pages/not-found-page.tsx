@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom'
 
-import { Button } from '@/components/ui/button'
+import { ButtonLink } from '@/components/shared/button-link'
 
 export function NotFoundPage() {
   return (
@@ -10,9 +9,7 @@ export function NotFoundPage() {
       <p className="max-w-sm text-sm text-muted-foreground">
         A página que você está procurando não existe ou foi movida.
       </p>
-      <Button asChild>
-        <Link to="/dashboard">Voltar ao início</Link>
-      </Button>
+      <ButtonLink to="/dashboard">Voltar ao início</ButtonLink>
     </div>
   )
 }

@@ -24,11 +24,11 @@ export function MatrizEstoque({ uniformes, isLoading, isError, className }: Matr
         </div>
         <CardAction className="hidden items-center gap-4 pt-1 text-xs text-muted-foreground sm:flex">
           <Legenda className="bg-signal-out-surface ring-1 ring-signal-out/35">esgotado</Legenda>
-          <Legenda className="bg-signal-low-surface">5 ou menos</Legenda>
+          <Legenda className="bg-signal-low-surface">no limite do tipo</Legenda>
         </CardAction>
       </CardHeader>
 
-      <CardContent className="px-0 pb-0">
+      <CardContent className="px-0">
         {isError && (
           <p className="px-5 py-10 text-center text-sm text-signal-out">
             Não foi possível carregar o estoque. Recarregue a página para tentar de novo.
@@ -78,6 +78,7 @@ export function MatrizEstoque({ uniformes, isLoading, isError, className }: Matr
                       className="bg-muted/60 py-1.5 pr-3 pl-5 text-left text-[0.8125rem] font-semibold"
                     >
                       {grupo.tipo}
+                      <span className="ml-2 font-normal text-muted-foreground">avisa com {grupo.limite} ou menos</span>
                     </th>
                     <td className="bg-muted/60 py-1.5 pr-5 pl-3 text-right text-[0.8125rem] font-semibold">
                       {grupo.total}
@@ -93,6 +94,7 @@ export function MatrizEstoque({ uniformes, isLoading, isError, className }: Matr
                         <Celula
                           key={tamanho}
                           quantidade={linha.porTamanho[tamanho]}
+                          limite={grupo.limite}
                           descricao={`${grupo.tipo} ${sexoLabels[linha.sexo].toLowerCase()}, tamanho ${tamanho}`}
                         />
                       ))}
@@ -109,7 +111,15 @@ export function MatrizEstoque({ uniformes, isLoading, isError, className }: Matr
   )
 }
 
-function Celula({ quantidade, descricao }: { quantidade: number | undefined; descricao: string }) {
+function Celula({
+  quantidade,
+  limite,
+  descricao,
+}: {
+  quantidade: number | undefined
+  limite: number
+  descricao: string
+}) {
   if (quantidade === undefined) {
     return (
       <td className="px-1 py-1 text-center">
@@ -121,7 +131,7 @@ function Celula({ quantidade, descricao }: { quantidade: number | undefined; des
     )
   }
 
-  const nivel = nivelEstoque(quantidade)
+  const nivel = nivelEstoque(quantidade, limite)
   const estilo =
     nivel === 'esgotado'
       ? 'bg-signal-out-surface text-signal-out font-semibold ring-1 ring-signal-out/35'

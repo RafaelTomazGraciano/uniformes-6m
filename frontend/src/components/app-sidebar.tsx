@@ -100,7 +100,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border">
         {session?.user.email && (
-          <p className="truncate px-2 pt-1 text-xs text-sidebar-foreground/70" title={session.user.email}>
+          <p className="truncate px-2 pt-1 text-xs text-muted-foreground" title={session.user.email}>
             {session.user.email}
           </p>
         )}

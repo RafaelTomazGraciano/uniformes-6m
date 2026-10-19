@@ -48,14 +48,14 @@ export function LoginForm() {
     <form className="space-y-7" onSubmit={handleSubmit((values) => mutation.mutate(values))} noValidate>
       <div className="space-y-2.5">
         <Label htmlFor="email" className="text-[15px] font-semibold text-foreground">
-          Usuario
+          E-mail
         </Label>
         <div className="relative">
           <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="email"
             type="email"
-            placeholder="Digite seu usuario"
+            placeholder="voce@escola.com.br"
             autoComplete="email"
             className="h-11 rounded-md border-border bg-card pl-9 text-[13px] text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
             {...register('email')}

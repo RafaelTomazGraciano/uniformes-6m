@@ -13,7 +13,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +46,17 @@ public class TurmaService {
 
     @Transactional(readOnly = true)
     public Page<ResponseTurmaDTO> buscarTodasTurmas(Pageable pageable) {
-        return turmaRepository.findAll(pageable)
-                .map(this::toResponseDTO);
+        Page<Turma> pagina = turmaRepository.findAll(pageable);
+
+        List<UUID> turmaIds = pagina.getContent().stream().map(Turma::getId).toList();
+        Map<UUID, Long> alunosPorTurma = turmaIds.isEmpty()
+                ? Map.of()
+                : alunoRepository.contarPorTurmas(turmaIds).stream()
+                        .collect(Collectors.toMap(
+                                AlunoRepository.QuantidadeAlunosPorTurma::getTurmaId,
+                                AlunoRepository.QuantidadeAlunosPorTurma::getQuantidade));
+
+        return pagina.map(turma -> toResponseDTO(turma, alunosPorTurma.getOrDefault(turma.getId(), 0L)));
     }
 
     @Transactional(readOnly = true)
@@ -89,7 +101,12 @@ public class TurmaService {
     }
 
     private ResponseTurmaDTO toResponseDTO(Turma turma) {
-        return new ResponseTurmaDTO(turma.getId(), turma.getNome(), turma.getTurno(), turma.getEnsino());
+        long quantidadeAlunos = turma.getId() == null ? 0 : alunoRepository.countByTurmaId(turma.getId());
+        return toResponseDTO(turma, quantidadeAlunos);
+    }
+
+    private ResponseTurmaDTO toResponseDTO(Turma turma, long quantidadeAlunos) {
+        return new ResponseTurmaDTO(turma.getId(), turma.getNome(), turma.getTurno(), turma.getEnsino(), quantidadeAlunos);
     }
 
 }

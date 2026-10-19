@@ -1,53 +1,45 @@
 import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { GraduationCap, Moon, Pencil, Plus, Sun, Sunset, Trash2, UserPlus } from 'lucide-react'
+import { ButtonLink } from '@/components/shared/button-link'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { AppLayout } from '@/components/layout/app-layout'
-import { TurmaFormDialog } from '@/components/turmas/turma-form-dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AcoesLinha } from '@/components/shared/acoes-linha'
+import { ConfirmarExclusao } from '@/components/shared/confirmar-exclusao'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/components/shared/estados-lista'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDeleteTurmaMutation, useTurmasQuery } from '@/hooks/use-turmas'
 import { ensinoLabels, turnoLabels } from '@/lib/labels'
-import type { Turma } from '@/lib/types/turma'
+import type { Turma, Turno } from '@/lib/types/turma'
+import { cn } from '@/lib/utils'
+
+const TURNOS: { turno: Turno; icone: React.ReactNode }[] = [
+  { turno: 'DIURNO', icone: <Sun aria-hidden className="size-4" /> },
+  { turno: 'VESPERTINO', icone: <Sunset aria-hidden className="size-4" /> },
+  { turno: 'NOTURNO', icone: <Moon aria-hidden className="size-4" /> },
+]
 
 export function TurmasPage() {
-  const [formAberto, setFormAberto] = useState(false)
-  const [emEdicao, setEmEdicao] = useState<Turma | undefined>(undefined)
-  const [emExclusao, setEmExclusao] = useState<Turma | null>(null)
-
-  const { data: turmas, isLoading, isError } = useTurmasQuery()
+  const navigate = useNavigate()
+  const { data: turmas, isLoading, isError, refetch } = useTurmasQuery()
   const deleteMutation = useDeleteTurmaMutation()
+  const [excluindo, setExcluindo] = useState<Turma | null>(null)
 
-  function abrirCriacao() {
-    setEmEdicao(undefined)
-    setFormAberto(true)
-  }
-
-  function abrirEdicao(turma: Turma) {
-    setEmEdicao(turma)
-    setFormAberto(true)
-  }
+  const novaTurma = (
+    <ButtonLink size="lg" to="/turmas/nova">
+      <Plus aria-hidden />
+      Nova turma
+    </ButtonLink>
+  )
 
   function confirmarExclusao() {
-    if (!emExclusao) return
-
-    deleteMutation.mutate(emExclusao.id, {
+    if (!excluindo) return
+    deleteMutation.mutate(excluindo.id, {
       onSuccess: () => {
-        toast.success('Turma excluída.')
-        setEmExclusao(null)
+        toast.success(`Turma ${excluindo.nome} excluída.`)
+        setExcluindo(null)
       },
-      // O backend recusa a exclusão quando ainda há alunos vinculados.
       onError: (error: Error) => toast.error(error.message),
     })
   }
@@ -55,91 +47,101 @@ export function TurmasPage() {
   return (
     <AppLayout
       title="Turmas"
-      description="Como os alunos são agrupados — nome, turno e ensino."
-      headerActions={
-        <Button onClick={abrirCriacao}>
-          <Plus className="size-4" />
-          Nova turma
-        </Button>
-      }
+      description="Como os alunos são agrupados. Abra uma turma para ver os alunos dela."
+      count={turmas?.length}
+      headerActions={novaTurma}
     >
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Turno</TableHead>
-              <TableHead>Ensino</TableHead>
-              <TableHead className="w-24 text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 4 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell colSpan={4}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
+      {isLoading && <EstadoCarregando rotulo="Carregando turmas" colunas={3} />}
+      {isError && <EstadoErro titulo="Não foi possível carregar as turmas" onRetry={() => refetch()} />}
 
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-destructive">
-                  Não foi possível carregar as turmas. Tente novamente mais tarde.
-                </TableCell>
-              </TableRow>
-            )}
+      {turmas && turmas.length === 0 && (
+        <EstadoVazio
+          icone={<GraduationCap />}
+          titulo="Nenhuma turma cadastrada"
+          descricao="Todo aluno precisa de uma turma. Crie as turmas primeiro e depois cadastre os alunos."
+          acao={novaTurma}
+        />
+      )}
 
-            {!isLoading && !isError && turmas?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhuma turma cadastrada. Todo aluno precisa de uma turma para ser criado.
-                </TableCell>
-              </TableRow>
-            )}
+      {turmas && turmas.length > 0 && (
+        <div className="flex flex-col gap-8">
+          {TURNOS.map(({ turno, icone }) => {
+            const doTurno = turmas.filter((turma) => turma.turno === turno)
+            if (doTurno.length === 0) return null
+            return (
+              <section key={turno} aria-labelledby={`turno-${turno}`} className="flex flex-col gap-3">
+                <h2
+                  id={`turno-${turno}`}
+                  className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase"
+                >
+                  {icone}
+                  {turnoLabels[turno]} · {doTurno.length} {doTurno.length === 1 ? 'turma' : 'turmas'}
+                </h2>
+                <ul className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(15rem,1fr))]">
+                  {doTurno.map((turma) => {
+                    const vazia = turma.quantidadeAlunos === 0
+                    return (
+                      <li key={turma.id}>
+                        <Card className={cn('h-full', vazia && 'border-dashed bg-muted/30')}>
+                          <CardHeader>
+                            <CardTitle className="text-base">
+                              <Link to={`/alunos?turma=${turma.id}`} className="underline-offset-4 hover:underline">
+                                {turma.nome}
+                              </Link>
+                            </CardTitle>
+                            <CardDescription>{ensinoLabels[turma.ensino]}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <p className={cn('text-sm', vazia && 'text-signal-low')} data-numeric>
+                              {vazia ? (
+                                'Nenhum aluno ainda'
+                              ) : (
+                                <>
+                                  <strong className="text-lg font-semibold">{turma.quantidadeAlunos}</strong>{' '}
+                                  {turma.quantidadeAlunos === 1 ? 'aluno' : 'alunos'}
+                                </>
+                              )}
+                            </p>
+                          </CardContent>
+                          <CardFooter className="mt-auto justify-between">
+                            <Link
+                              to={vazia ? `/alunos/novo?turma=${turma.id}` : `/alunos?turma=${turma.id}`}
+                              className="text-sm text-primary underline-offset-4 hover:underline"
+                            >
+                              {vazia ? 'Adicionar aluno' : 'Ver alunos'}
+                            </Link>
+                            <AcoesLinha
+                              rotulo={turma.nome}
+                              acoes={[
+                                { label: 'Editar', icone: <Pencil aria-hidden />, onSelect: () => navigate(`/turmas/${turma.id}/editar`) },
+                                { label: 'Adicionar aluno', icone: <UserPlus aria-hidden />, onSelect: () => navigate(`/alunos/novo?turma=${turma.id}`) },
+                                { label: 'Excluir', icone: <Trash2 aria-hidden />, destrutiva: true, onSelect: () => setExcluindo(turma) },
+                              ]}
+                            />
+                          </CardFooter>
+                        </Card>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
+      )}
 
-            {turmas?.map((turma) => (
-              <TableRow key={turma.id}>
-                <TableCell className="font-medium">{turma.nome}</TableCell>
-                <TableCell>{turnoLabels[turma.turno]}</TableCell>
-                <TableCell>{ensinoLabels[turma.ensino]}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon-sm" onClick={() => abrirEdicao(turma)}>
-                      <Pencil className="size-4" />
-                      <span className="sr-only">Editar {turma.nome}</span>
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => setEmExclusao(turma)}>
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Excluir {turma.nome}</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <TurmaFormDialog open={formAberto} onOpenChange={setFormAberto} turma={emEdicao} />
-
-      <AlertDialog open={Boolean(emExclusao)} onOpenChange={(aberto) => !aberto && setEmExclusao(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir turma</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir "{emExclusao?.nome}"? Só é possível se não houver alunos vinculados a ela.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled={deleteMutation.isPending} onClick={confirmarExclusao}>
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmarExclusao
+        aberto={Boolean(excluindo)}
+        titulo="Excluir turma"
+        descricao={
+          excluindo && excluindo.quantidadeAlunos > 0
+            ? `A turma ${excluindo.nome} tem ${excluindo.quantidadeAlunos} alunos. Mova ou exclua os alunos antes de excluir a turma.`
+            : `Excluir a turma ${excluindo?.nome ?? ''}? Essa ação não pode ser desfeita.`
+        }
+        carregando={deleteMutation.isPending}
+        onConfirmar={confirmarExclusao}
+        onCancelar={() => setExcluindo(null)}
+      />
     </AppLayout>
   )
 }
