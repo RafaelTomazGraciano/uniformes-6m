@@ -9,6 +9,7 @@ public record ResponseTurmaDTO(
         UUID id,
         String nome,
         Turno turno,
-        Ensino ensino
+        Ensino ensino,
+        long quantidadeAlunos
 ) {
 }

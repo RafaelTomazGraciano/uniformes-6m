@@ -52,8 +52,10 @@ public class PedidoService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ResponsePedidoDTO> buscarTodosPedidos(Pageable pageable) {
-        Page<Pedido> pagina = pedidoRepository.findAll(pageable);
+    public Page<ResponsePedidoDTO> buscarTodosPedidos(UUID alunoId, Pageable pageable) {
+        Page<Pedido> pagina = alunoId == null
+                ? pedidoRepository.findAll(pageable)
+                : pedidoRepository.findByAlunoId(alunoId, pageable);
 
         List<UUID> pedidoIds = pagina.getContent().stream().map(Pedido::getId).toList();
         Map<UUID, List<PedidoUniforme>> itensPorPedido = pedidoUniformeService.buscarItensPorPedidos(pedidoIds);

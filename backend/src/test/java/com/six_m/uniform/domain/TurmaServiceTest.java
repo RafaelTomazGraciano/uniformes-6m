@@ -109,12 +109,16 @@ public class TurmaServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         when(turmaRepository.findAll(pageable))
                 .thenReturn(new PageImpl<>(List.of(turma1, turma2), pageable, 2));
+        when(alunoRepository.contarPorTurmas(List.of(turma1.getId(), turma2.getId())))
+                .thenReturn(List.of(quantidade(turma1.getId(), 12)));
 
         var resultado = turmaService.buscarTodasTurmas(pageable);
 
         assertEquals(2, resultado.getTotalElements());
         assertEquals("Turma A", resultado.getContent().get(0).nome());
+        assertEquals(12, resultado.getContent().get(0).quantidadeAlunos());
         assertEquals("Turma B", resultado.getContent().get(1).nome());
+        assertEquals(0, resultado.getContent().get(1).quantidadeAlunos());
     }
 
     @Test
@@ -258,5 +262,19 @@ public class TurmaServiceTest {
         assertTrue(exception.getMessage().contains(id.toString()));
         verify(alunoRepository, never()).existsByTurmaId(any());
         verify(turmaRepository, never()).delete(any());
+    }
+
+    private static AlunoRepository.QuantidadeAlunosPorTurma quantidade(UUID turmaId, long quantidade) {
+        return new AlunoRepository.QuantidadeAlunosPorTurma() {
+            @Override
+            public UUID getTurmaId() {
+                return turmaId;
+            }
+
+            @Override
+            public long getQuantidade() {
+                return quantidade;
+            }
+        };
     }
 }

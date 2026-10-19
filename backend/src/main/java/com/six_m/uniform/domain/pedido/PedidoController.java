@@ -47,14 +47,16 @@ public class PedidoController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar pedidos", description = "Retorna uma lista paginada de pedidos. Ordenação disponível por: dataEfetivada (ex: sort=dataEfetivada,desc)")
+    @Operation(summary = "Listar pedidos", description = "Retorna uma lista paginada de pedidos, opcionalmente só os de um aluno. Ordenação disponível por: dataEfetivada (ex: sort=dataEfetivada,desc)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Parâmetro de ordenação inválido"),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
     })
-    public ResponseEntity<Page<ResponsePedidoDTO>> buscarTodosPedidos(@ParameterObject Pageable pageable) {
-        return ResponseEntity.ok(pedidoService.buscarTodosPedidos(pageable));
+    public ResponseEntity<Page<ResponsePedidoDTO>> buscarTodosPedidos(
+            @Parameter(description = "Filtra os pedidos de um aluno") @RequestParam(required = false) UUID alunoId,
+            @ParameterObject Pageable pageable) {
+        return ResponseEntity.ok(pedidoService.buscarTodosPedidos(alunoId, pageable));
     }
 
     @GetMapping("{id}")
