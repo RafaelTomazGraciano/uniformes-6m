@@ -4,7 +4,7 @@ import { BentoTile } from '@/components/dashboard/bento'
 import { Badge } from '@/components/ui/badge'
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { itensParaRepor, nivelEstoque } from '@/lib/estoque'
+import { itensParaRepor, nivelDoUniforme } from '@/lib/estoque'
 import { sexoLabels } from '@/lib/labels'
 import type { Uniforme } from '@/lib/types/uniforme'
 
@@ -25,14 +25,14 @@ export function ListaReposicao({
 
   return (
     <BentoTile className={className}>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div>
           <CardTitle>Repor primeiro</CardTitle>
           <CardDescription>Do que acabou para o que está acabando.</CardDescription>
         </div>
       </CardHeader>
 
-      <CardContent className="pb-4">
+      <CardContent>
         {isLoading && (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -43,14 +43,14 @@ export function ListaReposicao({
 
         {!isLoading && itens.length === 0 && (
           <p className="py-4 text-sm text-muted-foreground">
-            Todo tamanho tem mais de 5 peças. Nada a repor por enquanto.
+            Todo tamanho está acima do limite do seu tipo. Nada a repor por enquanto.
           </p>
         )}
 
         {!isLoading && visiveis.length > 0 && (
           <ul className="divide-y divide-border">
             {visiveis.map((uniforme) => {
-              const esgotado = nivelEstoque(uniforme.quantidade) === 'esgotado'
+              const esgotado = nivelDoUniforme(uniforme) === 'esgotado'
 
               return (
                 <li key={uniforme.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
@@ -71,7 +71,7 @@ export function ListaReposicao({
 
         {restantes > 0 && (
           <Link
-            to="/estoque"
+            to="/estoque?situacao=alerta"
             className="mt-3 inline-block text-sm text-primary underline-offset-4 hover:underline"
           >
             Ver os outros {restantes} tamanhos

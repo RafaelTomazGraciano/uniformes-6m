@@ -1,11 +1,10 @@
-import { Link } from 'react-router-dom'
 
 import { BentoFigura, BentoGrid } from '@/components/dashboard/bento'
+import { ButtonLink } from '@/components/shared/button-link'
 import { EntregasRecentes } from '@/components/dashboard/entregas-recentes'
 import { ListaReposicao } from '@/components/dashboard/lista-reposicao'
 import { MatrizEstoque } from '@/components/dashboard/matriz-estoque'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Button } from '@/components/ui/button'
 import { useAlunosQuery } from '@/hooks/use-alunos'
 import { usePedidosQuery } from '@/hooks/use-pedidos'
 import { useAllUniformesQuery } from '@/hooks/use-uniformes'
@@ -26,9 +25,14 @@ export function DashboardPage() {
       title="Visão geral"
       description="O que há no almoxarifado, o que falta e o que saiu."
       headerActions={
-        <Button asChild>
-          <Link to="/pedidos?nova=1">Nova entrega</Link>
-        </Button>
+        <>
+          <ButtonLink variant="outline" size="lg" to="/entradas/nova">
+            Nova entrada
+          </ButtonLink>
+          <ButtonLink size="lg" to="/pedidos/nova">
+            Nova entrega
+          </ButtonLink>
+        </>
       }
     >
       {/*
@@ -61,7 +65,7 @@ export function DashboardPage() {
         <BentoFigura
           valor={resumo.esgotados}
           rotulo="tamanhos esgotados"
-          para="/estoque"
+          para="/estoque?situacao=esgotado"
           isLoading={carregandoFiguras}
           alerta
           className="md:col-span-3"

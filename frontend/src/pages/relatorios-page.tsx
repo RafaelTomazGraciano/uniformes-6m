@@ -9,10 +9,11 @@ import { FiltroPeriodo } from '@/components/relatorios/filtro-periodo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SelectItens } from '@/components/shared/select-itens'
 import { useTurmasQuery } from '@/hooks/use-turmas'
 import { ApiError } from '@/lib/api-client'
 import { turnoLabels } from '@/lib/labels'
+import { toSelectItems } from '@/lib/select-items'
 import { periodoSchema, type PeriodoFormValues } from '@/lib/schemas/relatorio'
 import {
   baixarRelatorioComPeriodo,
@@ -118,6 +119,11 @@ export function RelatoriosPage() {
     void form.handleSubmit((periodo) => baixar(relatorio, periodo))()
   }
 
+  const itensTurma = [
+    { value: TODAS_AS_TURMAS, label: 'Todas as turmas' },
+    ...toSelectItems(turmas, (turma) => turma.id, (turma) => `${turma.nome} — ${turnoLabels[turma.turno]}`),
+  ]
+
   return (
     <AppLayout title="Relatórios" description="Documentos em PDF para prestação de contas e conferência.">
       <div className="space-y-4">
@@ -131,24 +137,18 @@ export function RelatoriosPage() {
                 <CardDescription>{relatorio.descricao}</CardDescription>
               </CardHeader>
 
-              <CardContent className="mt-auto space-y-4 pb-6">
+              <CardContent className="mt-auto space-y-4">
                 {/* A turma é do relatório de entregas, não do período: fica dentro do card. */}
                 {relatorio.usaTurma && (
                   <div className="flex max-w-xs flex-col gap-2">
                     <Label htmlFor="turma-relatorio">Turma</Label>
-                    <Select value={turmaId} onValueChange={(valor) => setTurmaId(valor ?? TODAS_AS_TURMAS)}>
-                      <SelectTrigger id="turma-relatorio" className="w-full">
-                        <SelectValue placeholder={carregandoTurmas ? 'Carregando turmas...' : 'Todas as turmas'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={TODAS_AS_TURMAS}>Todas as turmas</SelectItem>
-                        {turmas?.map((turma) => (
-                          <SelectItem key={turma.id} value={turma.id}>
-                            {turma.nome} — {turnoLabels[turma.turno]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SelectItens
+                      id="turma-relatorio"
+                      items={itensTurma}
+                      value={turmaId}
+                      onValueChange={(valor) => setTurmaId(valor || TODAS_AS_TURMAS)}
+                      placeholder={carregandoTurmas ? 'Carregando turmas…' : 'Todas as turmas'}
+                    />
                   </div>
                 )}
 

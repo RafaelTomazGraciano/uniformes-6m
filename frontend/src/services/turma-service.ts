@@ -6,7 +6,7 @@ export function listTurmas(pageable: Pageable = { sort: 'nome,asc' }): Promise<P
   return apiFetch(`/turma${pageableToQuery(pageable)}`)
 }
 
-export function listAllTurmas(): Promise<Turma[]> {
+export function listAllTurmas(): Promise<Turma[] > {
   return fetchAllPages((pageable) => listTurmas({ ...pageable, sort: 'nome,asc' }))
 }
 

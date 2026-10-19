@@ -6,6 +6,7 @@ export type Turma = {
   nome: string
   turno: Turno
   ensino: Ensino
+  quantidadeAlunos: number
 }
 
 export type CriarTurmaPayload = {

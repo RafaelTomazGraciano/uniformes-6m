@@ -22,6 +22,13 @@ const MESES = [
   'Dezembro',
 ]
 
+/* Com `items`, o gatilho mostra "Março" em vez do valor cru "3". */
+const ITENS_MES = MESES.map((mes, indice) => ({ value: String(indice + 1), label: mes }))
+const ITENS_AGRUPAR = [
+  { value: 'MES', label: 'Mês' },
+  { value: 'ANO', label: 'Ano' },
+]
+
 /** Um campo opcional vazio precisa virar `undefined`, não `NaN`. */
 function paraNumero(valor: string): number | undefined {
   return valor === '' ? undefined : Number(valor)
@@ -46,14 +53,14 @@ export function FiltroPeriodo({ form }: { form: UseFormReturn<PeriodoFormValues>
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex flex-wrap items-start gap-4 pb-6">
+      <CardContent className="flex flex-wrap items-start gap-4">
         <div className="flex w-40 flex-col gap-2">
           <Label htmlFor="tipo-periodo">Agrupar por</Label>
           <Controller
             control={control}
             name="tipo"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={(valor) => field.onChange(valor ?? 'MES')}>
+              <Select items={ITENS_AGRUPAR} value={field.value} onValueChange={(valor) => field.onChange(valor ?? 'MES')}>
                 <SelectTrigger id="tipo-periodo" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -86,7 +93,8 @@ export function FiltroPeriodo({ form }: { form: UseFormReturn<PeriodoFormValues>
               name="mesInicio"
               render={({ field }) => (
                 <Select
-                  value={field.value === undefined ? '' : String(field.value)}
+                  items={ITENS_MES}
+                  value={field.value === undefined ? null : String(field.value)}
                   onValueChange={(valor) => field.onChange(valor ? Number(valor) : undefined)}
                 >
                   <SelectTrigger id="mesInicio" className="w-full">
@@ -127,7 +135,8 @@ export function FiltroPeriodo({ form }: { form: UseFormReturn<PeriodoFormValues>
               name="mesFim"
               render={({ field }) => (
                 <Select
-                  value={field.value === undefined ? '' : String(field.value)}
+                  items={ITENS_MES}
+                  value={field.value === undefined ? null : String(field.value)}
                   onValueChange={(valor) => field.onChange(valor ? Number(valor) : undefined)}
                 >
                   <SelectTrigger id="mesFim" className="w-full">

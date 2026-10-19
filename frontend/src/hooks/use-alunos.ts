@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { AtualizarAlunoPayload, CriarAlunoPayload } from '@/lib/types/aluno'
 import type { Pageable } from '@/lib/types/page'
-import { createAluno, deleteAluno, listAllAlunos, listAlunos, updateAluno } from '@/services/aluno-service'
+import { createAluno, deleteAluno, getAluno, listAllAlunos, listAlunos, updateAluno } from '@/services/aluno-service'
 
 const alunosKeys = {
   list: (pageable: Pageable) => ['alunos', 'list', pageable] as const,
@@ -19,6 +19,14 @@ export function useAllAlunosQuery() {
   return useQuery({
     queryKey: ['alunos', 'all'],
     queryFn: listAllAlunos,
+  })
+}
+
+export function useAlunoQuery(id: string | undefined) {
+  return useQuery({
+    queryKey: ['alunos', 'detail', id],
+    queryFn: () => getAluno(id as string),
+    enabled: Boolean(id),
   })
 }
 

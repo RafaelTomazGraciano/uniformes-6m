@@ -4,29 +4,29 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/services/aluno-service')
 vi.mock('@/services/turma-service')
+vi.mock('@/services/pedido-service')
 
 import { AlunosPage } from '@/pages/alunos-page'
 import * as alunoService from '@/services/aluno-service'
+import * as pedidoService from '@/services/pedido-service'
 import * as turmaService from '@/services/turma-service'
+import { joao, maria, turmaA, turmaB } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
-
-const maria = { id: 'a1', nome: 'Maria Silva', turmaId: 't1', turmaNome: '9º Ano A' }
-const joao = { id: 'a2', nome: 'João Conceição', turmaId: 't2', turmaNome: '6º Ano B' }
-
-const turmaA = { id: 't1', nome: '9º Ano A', turno: 'DIURNO' as const, ensino: 'FUNDAMENTAL' as const }
-const turmaB = { id: 't2', nome: '6º Ano B', turno: 'VESPERTINO' as const, ensino: 'FUNDAMENTAL' as const }
-
-/** O formulário e os filtros têm selects próprios; busca pelo rótulo evita ambiguidade. */
-function selectDeTurmaDoFiltro() {
-  return screen.getByLabelText('Turma', { selector: '[id="filtro-turma"]' })
-}
 
 describe('AlunosPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(alunoService.listAllAlunos).mockResolvedValue([maria, joao])
     vi.mocked(turmaService.listAllTurmas).mockResolvedValue([turmaA, turmaB])
-    vi.mocked(alunoService.createAluno).mockResolvedValue(maria)
+    vi.mocked(pedidoService.listPedidos).mockResolvedValue({
+      content: [],
+      totalElements: 0,
+      totalPages: 0,
+      number: 0,
+      size: 50,
+      first: true,
+      last: true,
+    })
   })
 
   it('lista os alunos vindos do backend', async () => {
@@ -36,71 +36,43 @@ describe('AlunosPage', () => {
     expect(screen.getByText('João Conceição')).toBeInTheDocument()
   })
 
-  it('cadastra um aluno pelo diálogo', async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<AlunosPage />)
-
-    await screen.findByText('Maria Silva')
-
-    await user.click(screen.getByRole('button', { name: /novo aluno/i }))
-
-    const dialogo = await screen.findByRole('dialog')
-    await user.type(within(dialogo).getByLabelText('Nome'), 'Pedro Souza')
-    await user.click(within(dialogo).getByLabelText('Turma'))
-    await user.click(await screen.findByRole('option', { name: /9º Ano A/i }))
-    await user.click(within(dialogo).getByRole('button', { name: /^salvar$/i }))
-
-    expect(alunoService.createAluno).toHaveBeenCalledWith({ nome: 'Pedro Souza', turmaId: 't1' })
-  })
-
   it('filtra por nome ignorando acentos', async () => {
     const user = userEvent.setup()
     renderWithProviders(<AlunosPage />)
 
     await screen.findByText('Maria Silva')
-
-    await user.type(screen.getByLabelText('Buscar'), 'conceicao')
-
-    expect(screen.getByText('João Conceição')).toBeInTheDocument()
-    expect(screen.queryByText('Maria Silva')).not.toBeInTheDocument()
-  })
-
-  it('filtra pela turma escolhida', async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<AlunosPage />)
-
-    await screen.findByText('Maria Silva')
-
-    await user.click(selectDeTurmaDoFiltro())
-    await user.click(await screen.findByRole('option', { name: /6º Ano B/i }))
+    await user.type(screen.getByLabelText('Buscar aluno'), 'conceicao')
 
     expect(screen.getByText('João Conceição')).toBeInTheDocument()
     expect(screen.queryByText('Maria Silva')).not.toBeInTheDocument()
   })
 
-  it('explica quando a busca não encontra ninguém', async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<AlunosPage />)
+  it('mostra o nome da turma no filtro, nunca o id', async () => {
+    renderWithProviders(<AlunosPage />, { rota: '/?turma=t2' })
 
-    await screen.findByText('Maria Silva')
-
-    await user.type(screen.getByLabelText('Buscar'), 'zzzz')
-
-    expect(screen.getByText(/nenhum aluno encontrado para esta busca/i)).toBeInTheDocument()
+    const filtro = await screen.findByRole('combobox', { name: /filtrar por turma/i })
+    expect(await within(filtro).findByText(/6º Ano B/)).toBeInTheDocument()
+    expect(filtro).not.toHaveTextContent('t2')
+    expect(screen.queryByText('Maria Silva')).not.toBeInTheDocument()
   })
 
-  it('limpa os filtros e volta a listar todo mundo', async () => {
+  it('explica quando a busca não encontra ninguém e oferece limpar', async () => {
     const user = userEvent.setup()
     renderWithProviders(<AlunosPage />)
 
     await screen.findByText('Maria Silva')
+    await user.type(screen.getByLabelText('Buscar aluno'), 'zzzz')
 
-    await user.type(screen.getByLabelText('Buscar'), 'maria')
-    expect(screen.queryByText('João Conceição')).not.toBeInTheDocument()
+    expect(screen.getByText(/nenhum aluno com “zzzz”/i)).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: /limpar filtros/i })[0])
+    expect(await screen.findByText('Maria Silva')).toBeInTheDocument()
+  })
 
-    await user.click(screen.getByRole('button', { name: /limpar/i }))
+  it('abre a ficha do aluno com o histórico de entregas', async () => {
+    renderWithProviders(<AlunosPage />, { rota: '/?ver=a1' })
 
-    expect(screen.getByText('João Conceição')).toBeInTheDocument()
-    expect(screen.getByText('Maria Silva')).toBeInTheDocument()
+    const ficha = await screen.findByRole('complementary', { name: 'Maria Silva' })
+    expect(await within(ficha).findByText(/ainda não recebeu uniforme/i)).toBeInTheDocument()
+    expect(pedidoService.listPedidos).toHaveBeenCalledWith(expect.anything(), { alunoId: 'a1' })
   })
 })

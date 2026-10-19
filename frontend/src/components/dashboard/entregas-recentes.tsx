@@ -21,7 +21,7 @@ export function EntregasRecentes({
 
   return (
     <BentoTile className={className}>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <CardTitle>Últimas entregas</CardTitle>
         <CardAction>
           <Link to="/pedidos" className="text-sm text-primary underline-offset-4 hover:underline">
@@ -30,7 +30,7 @@ export function EntregasRecentes({
         </CardAction>
       </CardHeader>
 
-      <CardContent className="pb-4">
+      <CardContent>
         {isLoading && (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (

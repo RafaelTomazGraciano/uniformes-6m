@@ -1,202 +1,249 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Search, Trash2, Users, X } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
-import { AlunoFormDialog } from '@/components/alunos/aluno-form-dialog'
-import { AlunosFiltros, TODAS_AS_TURMAS } from '@/components/alunos/alunos-filtros'
+import { PainelAluno } from '@/components/alunos/painel-aluno'
+import { ButtonLink } from '@/components/shared/button-link'
 import { AppLayout } from '@/components/layout/app-layout'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { AcoesLinha } from '@/components/shared/acoes-linha'
+import { ConfirmarExclusao } from '@/components/shared/confirmar-exclusao'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/components/shared/estados-lista'
+import { Paginacao } from '@/components/shared/paginacao'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { SelectItens } from '@/components/shared/select-itens'
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAllAlunosQuery, useDeleteAlunoMutation } from '@/hooks/use-alunos'
+import { useTurmasQuery } from '@/hooks/use-turmas'
 import { filtrarAluno } from '@/lib/alunos'
+import { turnoLabels } from '@/lib/labels'
+import { toSelectItems } from '@/lib/select-items'
 import type { Aluno } from '@/lib/types/aluno'
 
-const POR_PAGINA = 10
+const POR_PAGINA = 15
+export const TODAS_AS_TURMAS = 'todas'
 
 export function AlunosPage() {
-  const [page, setPage] = useState(0)
-  const [busca, setBusca] = useState('')
-  const [turmaId, setTurmaId] = useState(TODAS_AS_TURMAS)
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingAluno, setEditingAluno] = useState<Aluno | undefined>(undefined)
-  const [deletingAluno, setDeletingAluno] = useState<Aluno | null>(null)
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const busca = searchParams.get('busca') ?? ''
+  const turmaId = searchParams.get('turma') ?? TODAS_AS_TURMAS
+  const verId = searchParams.get('ver')
+  const page = Number(searchParams.get('pagina') ?? 0) || 0
 
   /* A busca é feita no cliente sobre a lista completa: o endpoint de alunos não
      aceita filtro, e paginar no servidor buscaria só dentro da página visível. */
-  const { data: alunos, isLoading, isError } = useAllAlunosQuery()
+  const { data: alunos, isLoading, isError, refetch } = useAllAlunosQuery()
+  const turmas = useTurmasQuery()
   const deleteMutation = useDeleteAlunoMutation()
+  const [excluindo, setExcluindo] = useState<Aluno | null>(null)
 
-  const filtrados = useMemo(() => {
-    return (alunos ?? []).filter(
-      (aluno) => filtrarAluno(aluno, busca) && (turmaId === TODAS_AS_TURMAS || aluno.turmaId === turmaId),
-    )
-  }, [alunos, busca, turmaId])
+  const itensTurma = useMemo(
+    () => [
+      { value: TODAS_AS_TURMAS, label: 'Todas as turmas' },
+      ...toSelectItems(turmas.data, (turma) => turma.id, (turma) => `${turma.nome} — ${turnoLabels[turma.turno]}`),
+    ],
+    [turmas.data],
+  )
 
-  const totalPages = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
-  /* Filtrar encolhe a lista e pode deixar `page` além do fim; ancorar no total
-     evita a tela em branco sem precisar sincronizar estado num efeito. */
-  const paginaAtual = Math.min(page, totalPages - 1)
-  const visiveis = filtrados.slice(paginaAtual * POR_PAGINA, paginaAtual * POR_PAGINA + POR_PAGINA)
-
+  const filtrados = useMemo(
+    () =>
+      (alunos ?? []).filter(
+        (aluno) => filtrarAluno(aluno, busca) && (turmaId === TODAS_AS_TURMAS || aluno.turmaId === turmaId),
+      ),
+    [alunos, busca, turmaId],
+  )
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
+  const paginaAtual = Math.min(page, totalPaginas - 1)
+  const visiveis = filtrados.slice(paginaAtual * POR_PAGINA, (paginaAtual + 1) * POR_PAGINA)
   const temFiltro = busca.trim() !== '' || turmaId !== TODAS_AS_TURMAS
+  const selecionado = alunos?.find((aluno) => aluno.id === verId)
+  const nomeTurma = itensTurma.find((item) => item.value === turmaId)?.label
 
-  function filtrar(aplicar: () => void) {
-    aplicar()
-    setPage(0)
+  function atualizar(mudanca: Record<string, string | null>, resetarPagina = true) {
+    setSearchParams(
+      (atual) => {
+        const params = new URLSearchParams(atual)
+        for (const [chave, valor] of Object.entries(mudanca)) {
+          if (valor === null || valor === '') params.delete(chave)
+          else params.set(chave, valor)
+        }
+        if (resetarPagina) params.delete('pagina')
+        return params
+      },
+      { replace: true },
+    )
   }
 
-  const openCreateDialog = () => {
-    setEditingAluno(undefined)
-    setFormOpen(true)
-  }
-
-  const openEditDialog = (aluno: Aluno) => {
-    setEditingAluno(aluno)
-    setFormOpen(true)
-  }
-
-  const confirmDelete = () => {
-    if (!deletingAluno) return
-
-    deleteMutation.mutate(deletingAluno.id, {
+  function confirmarExclusao() {
+    if (!excluindo) return
+    deleteMutation.mutate(excluindo.id, {
       onSuccess: () => {
-        toast.success('Aluno excluído com sucesso.')
-        setDeletingAluno(null)
+        toast.success(`${excluindo.nome} foi excluído.`)
+        if (verId === excluindo.id) atualizar({ ver: null }, false)
+        setExcluindo(null)
       },
       onError: (error: Error) => toast.error(error.message),
     })
   }
 
+  const novoAluno = (
+    <ButtonLink size="lg" to={turmaId !== TODAS_AS_TURMAS ? `/alunos/novo?turma=${turmaId}` : '/alunos/novo'}>
+      <Plus aria-hidden />
+      Novo aluno
+    </ButtonLink>
+  )
+
   return (
     <AppLayout
       title="Alunos"
-      description="Quem pode receber uniformes, por turma."
-      headerActions={
-        <Button onClick={openCreateDialog}>
-          <Plus className="size-4" />
-          Novo aluno
-        </Button>
-      }
+      description="Quem pode receber uniformes, por turma. Escolha um aluno para ver o que ele já recebeu."
+      count={alunos?.length}
+      headerActions={novoAluno}
     >
-      <AlunosFiltros
-        busca={busca}
-        onBuscaChange={(valor) => filtrar(() => setBusca(valor))}
-        turmaId={turmaId}
-        onTurmaChange={(valor) => filtrar(() => setTurmaId(valor))}
-      />
+      {isError && <EstadoErro titulo="Não foi possível carregar os alunos" onRetry={() => refetch()} />}
 
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Turma</TableHead>
-              <TableHead className="w-24 text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell colSpan={3}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
+      {alunos && alunos.length === 0 && (
+        <EstadoVazio
+          icone={<Users />}
+          titulo="Nenhum aluno cadastrado"
+          descricao="Cadastre os alunos para registrar a entrega de uniformes a cada um. Todo aluno pertence a uma turma."
+          acao={novoAluno}
+        />
+      )}
 
-            {isError && (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center text-destructive">
-                  Não foi possível carregar os alunos. Tente novamente mais tarde.
-                </TableCell>
-              </TableRow>
+      {(isLoading || (alunos && alunos.length > 0)) && (
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <section aria-label="Lista de alunos" className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <InputGroup className="h-9 max-w-md min-w-56 flex-1">
+                <InputGroupAddon>
+                  <Search aria-hidden />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  aria-label="Buscar aluno"
+                  placeholder="Buscar por nome ou turma"
+                  autoComplete="off"
+                  value={busca}
+                  onChange={(event) => atualizar({ busca: event.target.value })}
+                />
+              </InputGroup>
+              <SelectItens
+                className="w-60"
+                aria-label="Filtrar por turma"
+                items={itensTurma}
+                value={turmaId}
+                onValueChange={(valor) => atualizar({ turma: valor === TODAS_AS_TURMAS || !valor ? null : valor })}
+              />
+              {temFiltro && (
+                <Button variant="ghost" onClick={() => atualizar({ busca: null, turma: null })}>
+                  <X aria-hidden />
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+
+            {isLoading && <EstadoCarregando rotulo="Carregando alunos" colunas={2} />}
+
+            {alunos && filtrados.length === 0 && (
+              <EstadoVazio
+                icone={<Search />}
+                titulo={busca ? `Nenhum aluno com “${busca}”` : 'Nenhum aluno nesta turma'}
+                descricao={
+                  turmaId !== TODAS_AS_TURMAS
+                    ? `Confira a grafia ou procure em todas as turmas. O filtro atual é “${nomeTurma}”.`
+                    : 'Confira a grafia ou cadastre o aluno.'
+                }
+                acao={
+                  <>
+                    {turmaId !== TODAS_AS_TURMAS && (
+                      <Button variant="outline" onClick={() => atualizar({ turma: null })}>
+                        Buscar em todas as turmas
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={() => atualizar({ busca: null, turma: null })}>
+                      Limpar filtros
+                    </Button>
+                  </>
+                }
+              />
             )}
 
-            {!isLoading && !isError && filtrados.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
-                  {temFiltro
-                    ? 'Nenhum aluno encontrado para esta busca. Verifique a grafia ou limpe os filtros.'
-                    : 'Nenhum aluno cadastrado ainda. Comece criando o primeiro.'}
-                </TableCell>
-              </TableRow>
+            {visiveis.length > 0 && (
+              <div className="overflow-hidden rounded-xl border border-border bg-card">
+                <Table>
+                  <TableCaption className="sr-only">
+                    Alunos{turmaId !== TODAS_AS_TURMAS ? ` da turma ${nomeTurma}` : ''}
+                  </TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead scope="col">Nome</TableHead>
+                      <TableHead scope="col">Turma</TableHead>
+                      <TableHead scope="col" className="w-14">
+                        <span className="sr-only">Ações</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visiveis.map((aluno) => (
+                      <TableRow key={aluno.id} data-state={aluno.id === verId ? 'selected' : undefined}>
+                        <TableCell className="font-medium">
+                          <Link
+                            to={`?${new URLSearchParams({ ...Object.fromEntries(searchParams), ver: aluno.id })}`}
+                            aria-current={aluno.id === verId ? 'true' : undefined}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {aluno.nome}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{aluno.turmaNome}</TableCell>
+                        <TableCell className="text-right">
+                          <AcoesLinha
+                            rotulo={aluno.nome}
+                            acoes={[
+                              { label: 'Nova entrega', icone: <Plus aria-hidden />, onSelect: () => navigate(`/pedidos/nova?aluno=${aluno.id}`) },
+                              { label: 'Editar', icone: <Pencil aria-hidden />, onSelect: () => navigate(`/alunos/${aluno.id}/editar`) },
+                              { label: 'Excluir', icone: <Trash2 aria-hidden />, destrutiva: true, onSelect: () => setExcluindo(aluno) },
+                            ]}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
 
-            {visiveis.map((aluno) => (
-              <TableRow key={aluno.id}>
-                <TableCell className="font-medium">{aluno.nome}</TableCell>
-                <TableCell>{aluno.turmaNome}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon-sm" onClick={() => openEditDialog(aluno)}>
-                      <Pencil className="size-4" />
-                      <span className="sr-only">Editar {aluno.nome}</span>
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => setDeletingAluno(aluno)}>
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Excluir {aluno.nome}</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            <Paginacao
+              pagina={paginaAtual}
+              totalPaginas={totalPaginas}
+              totalItens={filtrados.length}
+              porPagina={POR_PAGINA}
+              rotuloItens={['aluno', 'alunos']}
+              onChange={(proxima) => atualizar({ pagina: String(proxima) }, false)}
+            />
+          </section>
 
-      {filtrados.length > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            {filtrados.length} {filtrados.length === 1 ? 'aluno' : 'alunos'}
-            {totalPages > 1 && ` · página ${paginaAtual + 1} de ${totalPages}`}
-          </span>
-          {totalPages > 1 && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={paginaAtual === 0} onClick={() => setPage(paginaAtual - 1)}>
-                Anterior
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={paginaAtual >= totalPages - 1}
-                onClick={() => setPage(paginaAtual + 1)}
-              >
-                Próxima
-              </Button>
+          {selecionado ? (
+            <PainelAluno aluno={selecionado} onFechar={() => atualizar({ ver: null }, false)} />
+          ) : (
+            <div className="hidden rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground lg:block">
+              Escolha um aluno na lista para ver a ficha e o histórico de entregas.
             </div>
           )}
         </div>
       )}
 
-      <AlunoFormDialog open={formOpen} onOpenChange={setFormOpen} aluno={editingAluno} />
-
-      <AlertDialog open={Boolean(deletingAluno)} onOpenChange={(open) => !open && setDeletingAluno(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir aluno</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir "{deletingAluno?.nome}"? Essa ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled={deleteMutation.isPending} onClick={confirmDelete}>
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmarExclusao
+        aberto={Boolean(excluindo)}
+        titulo="Excluir aluno"
+        descricao={`Excluir “${excluindo?.nome ?? ''}”? Essa ação não pode ser desfeita.`}
+        carregando={deleteMutation.isPending}
+        onConfirmar={confirmarExclusao}
+        onCancelar={() => setExcluindo(null)}
+      />
     </AppLayout>
   )
 }

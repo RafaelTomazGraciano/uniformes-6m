@@ -16,9 +16,9 @@ export class ApiError extends Error {
 
 type ApiFetchOptions = Omit<RequestInit, 'body'> & { body?: unknown }
 
-async function parseErrorBody(response: Response): Promise<{ message?: string; errors?: Record<string, string> }> {
+async function parseErrorBody(response: Response): Promise<{ message?: string; errors?: Record<string, string > }> {
   try {
-    return (await response.json()) as { message?: string; errors?: Record<string, string> }
+    return (await response.json()) as { message?: string; errors?: Record<string, string > }
   } catch {
     return {}
   }

@@ -6,7 +6,7 @@ export function listAlunos(pageable: Pageable = { sort: 'nome,asc' }): Promise<P
   return apiFetch(`/aluno${pageableToQuery(pageable)}`)
 }
 
-export function listAllAlunos(): Promise<Aluno[]> {
+export function listAllAlunos(): Promise<Aluno[] > {
   return fetchAllPages((pageable) => listAlunos({ ...pageable, sort: 'nome,asc' }))
 }
 

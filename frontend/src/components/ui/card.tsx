@@ -36,8 +36,18 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   return <div data-slot="card-action" className={cn('shrink-0', className)} {...props} />
 }
 
+/* Padding único para todo card: 20px nas laterais e embaixo, e 20px em cima
+   quando não há cabeçalho logo antes. Depois de um cabeçalho sem divisória o
+   espaço já vem dele (pb-4); com divisória (border-b), o conteúdo volta a ter
+   respiro acima da linha. As páginas não sobrescrevem o padding vertical. */
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div data-slot="card-content" className={cn('px-5 pb-5', className)} {...props} />
+  return (
+    <div
+      data-slot="card-content"
+      className={cn('px-5 pt-5 pb-5 [[data-slot=card-header]:not(.border-b)+&]:pt-0', className)}
+      {...props}
+    />
+  )
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {

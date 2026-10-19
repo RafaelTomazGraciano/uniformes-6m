@@ -10,7 +10,7 @@ export function listTiposUniforme(pageable: Pageable = { sort: 'tipo,asc' }): Pr
   return apiFetch(`/tipo-uniforme${pageableToQuery(pageable)}`)
 }
 
-export function listAllTiposUniforme(): Promise<TipoUniforme[]> {
+export function listAllTiposUniforme(): Promise<TipoUniforme[] > {
   return fetchAllPages((pageable) => listTiposUniforme({ ...pageable, sort: 'tipo,asc' }))
 }
 

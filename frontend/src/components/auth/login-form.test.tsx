@@ -24,7 +24,7 @@ describe('LoginForm', () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginForm />)
 
-    await user.type(screen.getByLabelText('Usuario'), 'nao-e-email')
+    await user.type(screen.getByLabelText('E-mail'), 'nao-e-email')
     await user.click(screen.getByRole('button', { name: 'Mostrar senha' }))
 
     // Se o botão fosse submit, a validação teria disparado aqui.

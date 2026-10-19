@@ -1,4 +1,4 @@
-import { Label } from '@/components/ui/label'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import {
   Combobox,
   ComboboxActions,
@@ -31,8 +31,8 @@ export function AlunoPicker({ alunos, isLoading, isError, value, onChange, error
   const indisponivel = isLoading || isError
 
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor="aluno-busca">Aluno</Label>
+    <Field data-invalid={Boolean(errorMessage) || undefined}>
+      <FieldLabel htmlFor="aluno-busca">Aluno</FieldLabel>
 
       <Combobox
         items={alunos ?? []}
@@ -47,7 +47,8 @@ export function AlunoPicker({ alunos, isLoading, isError, value, onChange, error
         <ComboboxField>
           <ComboboxInput
             id="aluno-busca"
-            aria-invalid={Boolean(errorMessage)}
+            aria-invalid={Boolean(errorMessage) || undefined}
+            aria-describedby={errorMessage ? 'aluno-busca-erro' : undefined}
             placeholder={
               isError ? 'Não foi possível carregar os alunos' : isLoading ? 'Carregando alunos…' : 'Busque pelo nome'
             }
@@ -73,7 +74,7 @@ export function AlunoPicker({ alunos, isLoading, isError, value, onChange, error
         </ComboboxContent>
       </Combobox>
 
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
-    </div>
+      <FieldError id="aluno-busca-erro">{errorMessage}</FieldError>
+    </Field>
   )
 }
