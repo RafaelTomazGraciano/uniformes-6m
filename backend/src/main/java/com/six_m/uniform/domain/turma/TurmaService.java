@@ -1,0 +1,112 @@
+package com.six_m.uniform.domain.turma;
+
+import com.six_m.uniform.domain.aluno.AlunoRepository;
+import com.six_m.uniform.domain.turma.dto.RequestAtualizarTurmaDTO;
+import com.six_m.uniform.domain.turma.dto.RequestCriarTurmaDTO;
+import com.six_m.uniform.domain.turma.dto.ResponseTurmaDTO;
+import com.six_m.uniform.exception.BadRequestException;
+import com.six_m.uniform.exception.NotFoundException;
+import com.six_m.uniform.shared.dto.MessageResponseDTO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class TurmaService {
+
+    private final TurmaRepository turmaRepository;
+    private final AlunoRepository alunoRepository;
+
+    @Transactional
+    public ResponseTurmaDTO criarTurma(RequestCriarTurmaDTO dto) {
+        String nome = dto.nome().trim();
+
+        if (turmaRepository.existsByNomeIgnoreCase(nome)) {
+            throw new BadRequestException("Já existe uma turma com este nome");
+        }
+
+        Turma turma = Turma.builder()
+                .nome(nome)
+                .turno(dto.turno())
+                .ensino(dto.ensino())
+                .build();
+
+        turma = turmaRepository.save(turma);
+
+        return toResponseDTO(turma);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ResponseTurmaDTO> buscarTodasTurmas(Pageable pageable) {
+        Page<Turma> pagina = turmaRepository.findAll(pageable);
+
+        List<UUID> turmaIds = pagina.getContent().stream().map(Turma::getId).toList();
+        Map<UUID, Long> alunosPorTurma = turmaIds.isEmpty()
+                ? Map.of()
+                : alunoRepository.contarPorTurmas(turmaIds).stream()
+                        .collect(Collectors.toMap(
+                                AlunoRepository.QuantidadeAlunosPorTurma::getTurmaId,
+                                AlunoRepository.QuantidadeAlunosPorTurma::getQuantidade));
+
+        return pagina.map(turma -> toResponseDTO(turma, alunosPorTurma.getOrDefault(turma.getId(), 0L)));
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseTurmaDTO buscarTurma(UUID id) {
+        return toResponseDTO(buscarTurmaOuFalhar(id));
+    }
+
+    @Transactional
+    public ResponseTurmaDTO atualizarTurma(UUID id, RequestAtualizarTurmaDTO dto) {
+        Turma turma = buscarTurmaOuFalhar(id);
+        String nome = dto.nome().trim();
+
+        if (turmaRepository.existsByNomeIgnoreCaseAndIdNot(nome, id)) {
+            throw new BadRequestException("Já existe uma turma com este nome");
+        }
+
+        turma.setNome(nome);
+        turma.setTurno(dto.turno());
+        turma.setEnsino(dto.ensino());
+
+        turma = turmaRepository.save(turma);
+
+        return toResponseDTO(turma);
+    }
+
+    @Transactional
+    public MessageResponseDTO deletarTurma(UUID id) {
+        Turma turma = buscarTurmaOuFalhar(id);
+
+        if (alunoRepository.existsByTurmaId(id)) {
+            throw new BadRequestException("Não é possível excluir a turma: existem alunos vinculados a ela");
+        }
+
+        turmaRepository.delete(turma);
+
+        return new MessageResponseDTO("Turma deletada com sucesso");
+    }
+
+    private Turma buscarTurmaOuFalhar(UUID id) {
+        return turmaRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Turma não encontrada com o ID: " + id));
+    }
+
+    private ResponseTurmaDTO toResponseDTO(Turma turma) {
+        long quantidadeAlunos = turma.getId() == null ? 0 : alunoRepository.countByTurmaId(turma.getId());
+        return toResponseDTO(turma, quantidadeAlunos);
+    }
+
+    private ResponseTurmaDTO toResponseDTO(Turma turma, long quantidadeAlunos) {
+        return new ResponseTurmaDTO(turma.getId(), turma.getNome(), turma.getTurno(), turma.getEnsino(), quantidadeAlunos);
+    }
+
+}

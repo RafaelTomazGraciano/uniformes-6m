@@ -1,0 +1,12 @@
+package com.six_m.uniform.domain.tipoUniforme;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.UUID;
+
+@Repository
+public interface TipoUniformeRepository extends JpaRepository<TipoUniforme, UUID> {
+    boolean existsByTipoIgnoreCase(String tipo);
+    boolean existsByTipoIgnoreCaseAndIdNot(String tipo, UUID id);
+}
