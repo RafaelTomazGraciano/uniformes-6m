@@ -165,13 +165,13 @@ Todas as 11 chaves estrangeiras são `DEFERRABLE INITIALLY IMMEDIATE` e não dec
 
 ![DER](./DER.png)
 
-`DER.png` (idêntico a `backend/DER.png`) é gerado a partir do diagrama Mermaid acima com o [mermaid-cli](https://github.com/mermaid-js/mermaid-cli) (`npx mmdc -i erd.mmd -o DER.png -b white -w 1600 -s 3`). A antiga imagem do dbdiagram.io foi substituída para que diagrama e imagem venham da mesma fonte.
+`DER.png` (idêntico a `backend/DER.png`) é exportado do [dbdiagram.io](https://dbdiagram.io) a partir de [`schema.dbml`](./schema.dbml), que descreve o schema final em DBML. Para regenerar: cole o `schema.dbml` no dbdiagram.io e exporte em PNG. O diagrama Mermaid acima continua como versão em texto, renderizada direto pelo GitHub.
 
 ### O DER.png está atualizado?
 
-**Sim, em relação ao schema final (V1 a V5).** A imagem foi regenerada nesta rodada e conferida contra as migrations: mostra as **12 tabelas** (`escola`, `usuario`, `turma`, `aluno`, `tipo_uniforme`, `uniforme`, `pedido`, `pedido_uniforme`, `nota_fiscal`, `lote`, `item_lote` e a nova `requisicao`), as 11 chaves estrangeiras, as colunas novas `aluno.ativo`/`aluno.data_saida`, as datas `NOT NULL DEFAULT now()` de `pedido` e `lote`, e a VIEW `vw_estoque` como entidade à parte, rotulada "VIEW, somente leitura".
+**Sim, em relação ao schema final (V1 a V5).** A imagem foi regenerada no dbdiagram.io e conferida contra as migrations: mostra as **12 tabelas** (`escola`, `usuario`, `turma`, `aluno`, `tipo_uniforme`, `uniforme`, `pedido`, `pedido_uniforme`, `nota_fiscal`, `lote`, `item_lote` e a nova `requisicao`), as 11 chaves estrangeiras, as colunas novas `aluno.ativo`/`aluno.data_saida` e as datas `NOT NULL` de `pedido` e `lote`. O dbdiagram não desenha views: a `vw_estoque` está descrita na seção própria abaixo.
 
-A versão anterior (dbdiagram.io, commit `1063a46`) estava correta para a V1, mas ficou **desatualizada** com as migrations V2–V5: não tinha `requisicao`, `aluno.ativo`/`data_saida`, a view, nem a obrigatoriedade das datas.
+A versão anterior (commit `1063a46`) estava correta para a V1, mas ficou **desatualizada** com as migrations V2–V5: não tinha `requisicao`, `aluno.ativo`/`data_saida`, a view, nem a obrigatoriedade das datas.
 
 Detalhes que aparecem só no DDL e no dicionário abaixo:
 
