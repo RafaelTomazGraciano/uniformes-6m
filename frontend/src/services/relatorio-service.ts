@@ -3,6 +3,9 @@ import type { PeriodoFormValues } from '@/lib/schemas/relatorio'
 
 export type RelatorioComPeriodo = 'entrada' | 'saida' | 'transacoes' | 'entregas-turma'
 
+/** CSV sai em UTF-8 com BOM e separado por ";", para abrir direto no Excel. */
+export type FormatoRelatorio = 'pdf' | 'csv'
+
 function periodoParaQuery(periodo: PeriodoFormValues): string {
   const params = new URLSearchParams({ tipo: periodo.tipo, anoInicio: String(periodo.anoInicio) })
 
@@ -18,8 +21,8 @@ function periodoParaQuery(periodo: PeriodoFormValues): string {
   return params.toString()
 }
 
-export function baixarRelatorioEstoque(): Promise<Blob> {
-  return apiFetchBlob('/relatorio/estoque')
+export function baixarRelatorioEstoque(formato: FormatoRelatorio = 'pdf'): Promise<Blob> {
+  return apiFetchBlob(`/relatorio/estoque?formato=${formato}`)
 }
 
 export function baixarRelatorioComPeriodo(
@@ -27,9 +30,12 @@ export function baixarRelatorioComPeriodo(
   periodo: PeriodoFormValues,
   /** Só o relatório de entregas usa. Sem id, o backend devolve todas as turmas. */
   turmaId?: string,
+  formato: FormatoRelatorio = 'pdf',
 ): Promise<Blob> {
-  const query = periodoParaQuery(periodo)
-  return apiFetchBlob(`/relatorio/${relatorio}?${turmaId ? `${query}&turmaId=${turmaId}` : query}`)
+  const params = new URLSearchParams(periodoParaQuery(periodo))
+  if (turmaId) params.set('turmaId', turmaId)
+  params.set('formato', formato)
+  return apiFetchBlob(`/relatorio/${relatorio}?${params.toString()}`)
 }
 
 export function salvarArquivo(blob: Blob, nomeArquivo: string) {

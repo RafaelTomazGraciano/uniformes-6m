@@ -6,6 +6,17 @@ export type Aluno = {
   telefoneResponsavel?: string | null
   turmaId: string
   turmaNome: string
+  /** `false` depois de "Registrar saída": o histórico fica, novas entregas não. */
+  ativo: boolean
+  /** LocalDateTime da saída; nulo enquanto o aluno está ativo. */
+  dataSaida?: string | null
+}
+
+/** Filtros da listagem, aplicados no servidor. */
+export type FiltroAlunos = {
+  nome?: string
+  turmaId?: string
+  ativo?: boolean
 }
 
 export type CriarAlunoPayload = {

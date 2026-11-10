@@ -5,9 +5,11 @@ import com.six_m.uniform.domain.itemLote.ItemLoteService;
 import com.six_m.uniform.domain.itemLote.dto.ResponseItemLoteDTO;
 import com.six_m.uniform.domain.lote.dto.RequestAtualizarLoteDTO;
 import com.six_m.uniform.domain.lote.dto.RequestCriarLoteDTO;
+import com.six_m.uniform.domain.lote.dto.RequestItemEntradaDTO;
 import com.six_m.uniform.domain.lote.dto.ResponseLoteDTO;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalService;
+import com.six_m.uniform.domain.uniforme.CombinacaoUniforme;
 import com.six_m.uniform.domain.uniforme.UniformeService;
 import com.six_m.uniform.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,10 +37,13 @@ public class LoteService {
     public ResponseLoteDTO criarLote(RequestCriarLoteDTO dto) {
         NotaFiscal notaFiscal = notaFiscalService.criarParaLote(dto.chaveAcesso());
 
+        uniformeService.travarEstoquePorCombinacao(combinacoesDosItens(dto.itens()));
+
+        // Sem data o lote sumia dos relatórios por período: vale o momento do registro.
         Lote lote = Lote.builder()
                 .notaFiscal(notaFiscal)
                 .fornecedor(dto.fornecedor())
-                .dataEntrega(dto.dataEntrega())
+                .dataEntrega(dto.dataEntrega() != null ? dto.dataEntrega() : LocalDateTime.now())
                 .build();
 
         lote = loteRepository.save(lote);
@@ -74,6 +81,11 @@ public class LoteService {
 
         List<ItemLote> itensAntigos = itemLoteService.buscarItensPorLote(id);
 
+        List<CombinacaoUniforme> combinacoes = new ArrayList<>(combinacoesDosItens(dto.itens()));
+        itensAntigos.forEach(item -> combinacoes.add(
+                new CombinacaoUniforme(item.getTipoUniforme().getId(), item.getTamanho(), item.getSexo())));
+        uniformeService.travarEstoquePorCombinacao(combinacoes);
+
         List<ItemLote> itensNovos = itemLoteService.criarItensParaLote(lote, dto.itens());
         for (ItemLote itemNovo : itensNovos) {
             uniformeService.darEntrada(itemNovo.getTipoUniforme().getId(), itemNovo.getTamanho(), itemNovo.getSexo(), itemNovo.getQuantidade());
@@ -86,12 +98,22 @@ public class LoteService {
 
         lote.setNotaFiscal(notaFiscal);
         lote.setFornecedor(dto.fornecedor());
-        lote.setDataEntrega(dto.dataEntrega());
+        // Editar sem informar a data mantém a original, em vez de apagá-la.
+        if (dto.dataEntrega() != null) {
+            lote.setDataEntrega(dto.dataEntrega());
+        } else if (lote.getDataEntrega() == null) {
+            lote.setDataEntrega(LocalDateTime.now());
+        }
         lote = loteRepository.save(lote);
 
         return toResponseDTO(lote, itensNovos);
     }
 
+    private List<CombinacaoUniforme> combinacoesDosItens(List<RequestItemEntradaDTO> itens) {
+        return itens.stream()
+                .map(item -> new CombinacaoUniforme(item.tipoUniformeId(), item.tamanho(), item.sexo()))
+                .toList();
+    }
 
     private Lote buscarLoteOuFalhar(UUID id) {
         return loteRepository.findById(id)

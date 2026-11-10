@@ -27,7 +27,9 @@ type AlunoPickerProps = {
 }
 
 export function AlunoPicker({ alunos, isLoading, isError, value, onChange, errorMessage }: AlunoPickerProps) {
-  const selecionado = alunos?.find((aluno) => aluno.id === value) ?? null
+  /* Quem já saiu não recebe entrega nova, mesmo que a lista venha sem filtro. */
+  const disponiveis = alunos?.filter((aluno) => aluno.ativo !== false)
+  const selecionado = disponiveis?.find((aluno) => aluno.id === value) ?? null
   const indisponivel = isLoading || isError
 
   return (
@@ -35,7 +37,7 @@ export function AlunoPicker({ alunos, isLoading, isError, value, onChange, error
       <FieldLabel htmlFor="aluno-busca">Aluno</FieldLabel>
 
       <Combobox
-        items={alunos ?? []}
+        items={disponiveis ?? []}
         value={selecionado}
         onValueChange={(aluno: Aluno | null) => onChange(aluno?.id ?? '')}
         itemToStringLabel={(aluno: Aluno) => aluno.nome}

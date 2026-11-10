@@ -20,7 +20,7 @@ export function DetalheEntregaSheet({ pedidoId, onClose }: DetalheEntregaSheetPr
     <Sheet open={Boolean(pedidoId)} onOpenChange={(aberto) => !aberto && onClose()}>
       <SheetContent className="w-full gap-0 data-[side=right]:sm:max-w-md">
         <SheetHeader className="border-b border-border p-6">
-          <SheetTitle className="text-lg">{pedido ? pedido.alunoNome : 'Entrega'}</SheetTitle>
+          <SheetTitle className="text-lg">{pedido ? pedido.alunoNome || 'Aluno não identificado' : 'Entrega'}</SheetTitle>
           <SheetDescription>
             {pedido
               ? `${formatarDataHora(pedido.dataEfetivada)} · registrada por ${pedido.usuarioNome}`
@@ -39,16 +39,21 @@ export function DetalheEntregaSheet({ pedidoId, onClose }: DetalheEntregaSheetPr
             </div>
           )}
 
-          {pedido && <ItensAgrupados itens={pedido.itens.map((item) => ({ chave: item.id, tipo: item.uniformeTipoUniformeNome, sexo: item.uniformeSexo, tamanho: item.uniformeTamanho, quantidade: item.quantidade }))} />}
+          {pedido && <ItensAgrupados itens={(pedido.itens ?? []).map((item) => ({ chave: item.id, tipo: item.uniformeTipoUniformeNome, sexo: item.uniformeSexo, tamanho: item.uniformeTamanho, quantidade: item.quantidade }))} />}
         </div>
 
         {pedido && (
           <SheetFooter className="border-t border-border p-6">
-            <ButtonLink
-              size="lg" to={`/pedidos/nova?aluno=${pedido.alunoId}`}>
-              <Plus aria-hidden />
-              Nova entrega para este aluno
-            </ButtonLink>
+            {pedido.alunoAtivo !== false ? (
+              <ButtonLink size="lg" to={`/pedidos/nova?aluno=${pedido.alunoId}`}>
+                <Plus aria-hidden />
+                Nova entrega para este aluno
+              </ButtonLink>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                A saída deste aluno foi registrada: a entrega fica no histórico, mas ele não recebe novas peças.
+              </p>
+            )}
             <ButtonLink variant="outline" size="lg" to={`/alunos?ver=${pedido.alunoId}`}>
               Ver ficha do aluno
             </ButtonLink>

@@ -10,6 +10,12 @@ import type { Uniforme } from '@/lib/types/uniforme'
 
 const LIMITE_VISIVEL = 6
 
+/** Abre a requisição ao fornecedor já com a peça escolhida. */
+function linkSolicitar(uniforme: Pick<Uniforme, 'tipoUniformeId' | 'sexo' | 'tamanho'>) {
+  const params = new URLSearchParams({ tipo: uniforme.tipoUniformeId, sexo: uniforme.sexo, tamanho: uniforme.tamanho })
+  return `/requisicoes/nova?${params}`
+}
+
 export function ListaReposicao({
   uniformes,
   isLoading,
@@ -60,9 +66,18 @@ export function ListaReposicao({
                       {sexoLabels[uniforme.sexo]}, tamanho {uniforme.tamanho}
                     </p>
                   </div>
-                  <Badge variant={esgotado ? 'out' : 'low'} data-numeric>
-                    {esgotado ? 'esgotado' : `${uniforme.quantidade} ${uniforme.quantidade === 1 ? 'peça' : 'peças'}`}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Badge variant={esgotado ? 'out' : 'low'} data-numeric>
+                      {esgotado ? 'esgotado' : `${uniforme.quantidade} ${uniforme.quantidade === 1 ? 'peça' : 'peças'}`}
+                    </Badge>
+                    <Link
+                      to={linkSolicitar(uniforme)}
+                      className="text-sm text-primary underline-offset-4 hover:underline"
+                      aria-label={`Solicitar ${uniforme.tipoUniformeNome} ${sexoLabels[uniforme.sexo].toLowerCase()} ${uniforme.tamanho}`}
+                    >
+                      Solicitar
+                    </Link>
+                  </div>
                 </li>
               )
             })}

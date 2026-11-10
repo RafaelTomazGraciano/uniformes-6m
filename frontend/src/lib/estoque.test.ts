@@ -12,6 +12,16 @@ describe('nivelEstoque', () => {
   })
 })
 
+describe('limite exato (CT07)', () => {
+  it('trata a quantidade igual ao limite como baixo, igual ao backend e à view vw_estoque', () => {
+    expect(nivelEstoque(5, 5)).toBe('baixo')
+    expect(nivelEstoque(4, 5)).toBe('baixo')
+    expect(nivelEstoque(1, 5)).toBe('baixo')
+    expect(nivelEstoque(6, 5)).toBe('ok')
+    expect(nivelEstoque(0, 5)).toBe('esgotado')
+  })
+})
+
 describe('nivelDoUniforme', () => {
   it('confia no alerta calculado pelo backend e separa o esgotado', () => {
     expect(nivelDoUniforme(uniforme({ id: 'a', quantidade: 3, estoqueBaixoAlerta: true }))).toBe('baixo')

@@ -106,7 +106,7 @@ export function LoginForm() {
         </Label>
 
         <Link to="/trocar-senha" className="text-[11px] font-medium text-primary hover:underline">
-          Esqueci minha senha
+          Trocar senha
         </Link>
       </div>
 

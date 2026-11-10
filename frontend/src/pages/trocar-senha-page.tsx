@@ -20,14 +20,14 @@ export function TrocarSenhaPage() {
     formState: { errors },
   } = useForm<TrocarSenhaFormValues>({
     resolver: zodResolver(trocarSenhaSchema),
-    defaultValues: { email: '', novaSenha: '', confirmarSenha: '' },
+    defaultValues: { email: '', senhaAtual: '', novaSenha: '', confirmarSenha: '' },
   })
 
   async function onSubmit(valores: TrocarSenhaFormValues) {
     setSalvando(true)
 
     try {
-      await trocarSenha({ email: valores.email, novaSenha: valores.novaSenha })
+      await trocarSenha({ email: valores.email, senhaAtual: valores.senhaAtual, novaSenha: valores.novaSenha })
       toast.success('Senha alterada. Entre com a nova senha.')
       navigate('/login', { replace: true })
     } catch (error) {
@@ -45,7 +45,7 @@ export function TrocarSenhaPage() {
             <section className="flex items-center p-6 md:p-8">
               <div className="w-full px-1 md:px-2">
                 <p className="mb-2 text-sm text-muted-foreground">
-                  Informe o e-mail da conta e escolha uma nova senha.
+                  Informe o e-mail e a senha atual da conta e escolha uma nova senha.
                 </p>
                 <h1 className="mb-10 text-4xl font-semibold text-foreground md:text-[40px]">Trocar senha</h1>
 
@@ -64,6 +64,21 @@ export function TrocarSenhaPage() {
                       aria-invalid={Boolean(errors.email)}
                     />
                     {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <Label htmlFor="senhaAtual" className="text-[15px] font-semibold">
+                      Senha atual
+                    </Label>
+                    <Input
+                      id="senhaAtual"
+                      type="password"
+                      autoComplete="current-password"
+                      className="h-11"
+                      {...register('senhaAtual')}
+                      aria-invalid={Boolean(errors.senhaAtual)}
+                    />
+                    {errors.senhaAtual && <p className="text-sm text-destructive">{errors.senhaAtual.message}</p>}
                   </div>
 
                   <div className="space-y-2.5">

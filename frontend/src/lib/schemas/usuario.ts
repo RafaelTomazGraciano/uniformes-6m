@@ -10,6 +10,7 @@ export type AtualizarUsuarioFormValues = z.infer<typeof atualizarUsuarioSchema>
 export const trocarSenhaSchema = z
   .object({
     email: z.email('Informe um e-mail válido.'),
+    senhaAtual: z.string().min(1, 'Informe a senha atual.'),
     novaSenha: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
     confirmarSenha: z.string().min(6, 'Confirme a nova senha.'),
   })

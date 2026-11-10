@@ -22,6 +22,7 @@ import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -29,6 +30,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -282,4 +284,208 @@ public class PedidoServiceTest {
         assertTrue(response.itens().isEmpty());
     }
 
+    @Test
+    void deveUsarOMomentoAtualQuandoDataEfetivadaNaoEInformada() {
+        UUID alunoId = UUID.randomUUID();
+        UUID uniformeId = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(alunoId).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        RequestCriarPedidoDTO dto = new RequestCriarPedidoDTO(alunoId, null, List.of(new RequestItemSaidaDTO(uniformeId, 1)));
+
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(aluno));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pedidoUniformeService.criarItensParaPedido(any(Pedido.class), eq(dto.itens()))).thenReturn(List.of());
+
+        LocalDateTime antes = LocalDateTime.now();
+        ResponsePedidoDTO response = pedidoService.criarPedido(dto, usuario);
+
+        assertNotNull(response.dataEfetivada());
+        assertFalse(response.dataEfetivada().isBefore(antes));
+        assertFalse(response.dataEfetivada().isAfter(LocalDateTime.now()));
+    }
+
+    @Test
+    void deveManterADataInformadaAoCriarPedido() {
+        UUID alunoId = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(alunoId).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        LocalDateTime data = LocalDateTime.of(2026, 3, 15, 9, 0);
+        RequestCriarPedidoDTO dto = new RequestCriarPedidoDTO(alunoId, data, List.of(new RequestItemSaidaDTO(UUID.randomUUID(), 1)));
+
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(aluno));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pedidoUniformeService.criarItensParaPedido(any(Pedido.class), eq(dto.itens()))).thenReturn(List.of());
+
+        assertEquals(data, pedidoService.criarPedido(dto, usuario).dataEfetivada());
+    }
+
+    @Test
+    void deveManterADataOriginalAoAtualizarPedidoSemData() {
+        UUID pedidoId = UUID.randomUUID();
+        UUID alunoId = UUID.randomUUID();
+        LocalDateTime dataOriginal = LocalDateTime.of(2026, 3, 15, 9, 0);
+        Aluno aluno = Aluno.builder().id(alunoId).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        Pedido pedido = Pedido.builder().id(pedidoId).aluno(aluno).usuario(usuario).dataEfetivada(dataOriginal).build();
+        RequestAtualizarPedidoDTO dto = new RequestAtualizarPedidoDTO(alunoId, null, List.of(new RequestItemSaidaDTO(UUID.randomUUID(), 1)));
+
+        when(pedidoRepository.findById(pedidoId)).thenReturn(Optional.of(pedido));
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(aluno));
+        when(pedidoUniformeService.buscarItensPorPedido(pedidoId)).thenReturn(List.of());
+        when(pedidoUniformeService.criarItensParaPedido(pedido, dto.itens())).thenReturn(List.of());
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertEquals(dataOriginal, pedidoService.atualizarPedido(pedidoId, dto, usuario).dataEfetivada());
+    }
+
+    @Test
+    void deveTravarOEstoqueDeTodasAsPecasAntesDeDarSaida() {
+        UUID alunoId = UUID.randomUUID();
+        UUID uniformeA = UUID.randomUUID();
+        UUID uniformeB = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(alunoId).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        RequestCriarPedidoDTO dto = new RequestCriarPedidoDTO(alunoId, null, List.of(
+                new RequestItemSaidaDTO(uniformeB, 1),
+                new RequestItemSaidaDTO(uniformeA, 2),
+                new RequestItemSaidaDTO(uniformeB, 3)));
+
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(aluno));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        // O PedidoUniformeService já devolve as linhas repetidas somadas (B: 1 + 3).
+        PedidoUniforme itemB = PedidoUniforme.builder().uniforme(Uniforme.builder().id(uniformeB).tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).build()).quantidade(4).build();
+        PedidoUniforme itemA = PedidoUniforme.builder().uniforme(Uniforme.builder().id(uniformeA).tipoUniforme(tipo).tamanho(Tamanho.P).sexo(Sexo.MASCULINO).build()).quantidade(2).build();
+        when(pedidoUniformeService.criarItensParaPedido(any(Pedido.class), eq(dto.itens()))).thenReturn(List.of(itemB, itemA));
+
+        pedidoService.criarPedido(dto, usuario);
+
+        InOrder ordem = inOrder(uniformeService);
+        ordem.verify(uniformeService).travarEstoque(List.of(uniformeB, uniformeA, uniformeB));
+        ordem.verify(uniformeService).darSaida(uniformeB, 4);
+        ordem.verify(uniformeService).darSaida(uniformeA, 2);
+    }
+
+    @Test
+    void deveTravarAsPecasAntigasENovasAntesDeAtualizarPedido() {
+        UUID pedidoId = UUID.randomUUID();
+        UUID alunoId = UUID.randomUUID();
+        UUID uniformeAntigo = UUID.randomUUID();
+        UUID uniformeNovo = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(alunoId).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        Pedido pedido = Pedido.builder().id(pedidoId).aluno(aluno).usuario(usuario).build();
+
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").build();
+        PedidoUniforme itemAntigo = PedidoUniforme.builder().uniforme(Uniforme.builder().id(uniformeAntigo).tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).build()).quantidade(1).build();
+        RequestAtualizarPedidoDTO dto = new RequestAtualizarPedidoDTO(alunoId, null, List.of(new RequestItemSaidaDTO(uniformeNovo, 1)));
+
+        when(pedidoRepository.findById(pedidoId)).thenReturn(Optional.of(pedido));
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(aluno));
+        when(pedidoUniformeService.buscarItensPorPedido(pedidoId)).thenReturn(List.of(itemAntigo));
+        when(pedidoUniformeService.criarItensParaPedido(pedido, dto.itens())).thenReturn(List.of());
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        pedidoService.atualizarPedido(pedidoId, dto, usuario);
+
+        InOrder ordem = inOrder(uniformeService);
+        ordem.verify(uniformeService).travarEstoque(List.of(uniformeNovo, uniformeAntigo));
+        ordem.verify(uniformeService).estornarSaida(uniformeAntigo, 1);
+    }
+
+    @Test
+    void deveRecusarEntregaParaAlunoQueSaiu() {
+        UUID alunoId = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(alunoId).nome("João")
+                .ativo(false).dataSaida(LocalDateTime.of(2026, 3, 15, 9, 0)).build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        RequestCriarPedidoDTO dto = new RequestCriarPedidoDTO(alunoId, null, List.of(new RequestItemSaidaDTO(UUID.randomUUID(), 1)));
+
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(aluno));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> pedidoService.criarPedido(dto, usuario));
+
+        assertTrue(exception.getMessage().contains("15/03/2026"));
+        verify(pedidoRepository, never()).save(any());
+        verify(pedidoUniformeService, never()).criarItensParaPedido(any(), any());
+        verify(uniformeService, never()).darSaida(any(), anyInt());
+    }
+
+    @Test
+    void deveRecusarTransferirEntregaParaAlunoQueSaiu() {
+        UUID pedidoId = UUID.randomUUID();
+        UUID desligadoId = UUID.randomUUID();
+        Aluno ativo = Aluno.builder().id(UUID.randomUUID()).nome("João").build();
+        Aluno desligado = Aluno.builder().id(desligadoId).nome("Maria").ativo(false).dataSaida(LocalDateTime.now()).build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        Pedido pedido = Pedido.builder().id(pedidoId).aluno(ativo).usuario(usuario).build();
+        RequestAtualizarPedidoDTO dto = new RequestAtualizarPedidoDTO(desligadoId, null, List.of(new RequestItemSaidaDTO(UUID.randomUUID(), 1)));
+
+        when(pedidoRepository.findById(pedidoId)).thenReturn(Optional.of(pedido));
+        when(alunoRepository.findById(desligadoId)).thenReturn(Optional.of(desligado));
+
+        assertThrows(BadRequestException.class, () -> pedidoService.atualizarPedido(pedidoId, dto, usuario));
+        verify(pedidoUniformeService, never()).buscarItensPorPedido(any());
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void devePermitirCorrigirEntregaAntigaDeAlunoQueSaiu() {
+        UUID pedidoId = UUID.randomUUID();
+        UUID alunoId = UUID.randomUUID();
+        Aluno desligado = Aluno.builder().id(alunoId).nome("Maria").ativo(false).dataSaida(LocalDateTime.now()).build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        Pedido pedido = Pedido.builder().id(pedidoId).aluno(desligado).usuario(usuario).build();
+        RequestAtualizarPedidoDTO dto = new RequestAtualizarPedidoDTO(alunoId, null, List.of());
+
+        when(pedidoRepository.findById(pedidoId)).thenReturn(Optional.of(pedido));
+        when(alunoRepository.findById(alunoId)).thenReturn(Optional.of(desligado));
+        when(pedidoUniformeService.buscarItensPorPedido(pedidoId)).thenReturn(List.of());
+        when(pedidoUniformeService.criarItensParaPedido(pedido, dto.itens())).thenReturn(List.of());
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponsePedidoDTO response = pedidoService.atualizarPedido(pedidoId, dto, usuario);
+
+        assertEquals(alunoId, response.alunoId());
+        assertFalse(response.alunoAtivo());
+    }
+
+    @Test
+    void deveManterHistoricoDeAlunoQueSaiuNaListagem() {
+        Aluno desligado = Aluno.builder().id(UUID.randomUUID()).nome("Maria").ativo(false).dataSaida(LocalDateTime.now()).build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        Pedido pedido = Pedido.builder().id(UUID.randomUUID()).aluno(desligado).usuario(usuario).build();
+
+        Pageable pageable = PageRequest.of(0, 10);
+        when(pedidoRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(pedido), pageable, 1));
+
+        var resultado = pedidoService.buscarTodosPedidos(null, pageable);
+
+        ResponsePedidoDTO dto = resultado.getContent().getFirst();
+        assertEquals("Maria", dto.alunoNome());
+        assertEquals(desligado.getId(), dto.alunoId());
+        assertFalse(dto.alunoAtivo());
+    }
+
+    @Test
+    void naoDeveQuebrarListagemQuandoAlunoOuUsuarioNaoPodemSerCarregados() {
+        Aluno aluno = Aluno.builder().id(UUID.randomUUID()).nome("João").build();
+        Usuario usuario = Usuario.builder().id(UUID.randomUUID()).nome("Rafael").build();
+        Pedido valido = Pedido.builder().id(UUID.randomUUID()).aluno(aluno).usuario(usuario).build();
+        Pedido orfao = Pedido.builder().id(UUID.randomUUID()).aluno(null).usuario(null).build();
+
+        Pageable pageable = PageRequest.of(0, 10);
+        when(pedidoRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(valido, orfao), pageable, 2));
+
+        var resultado = pedidoService.buscarTodosPedidos(null, pageable);
+
+        assertEquals(2, resultado.getContent().size());
+        assertEquals("João", resultado.getContent().get(0).alunoNome());
+        assertTrue(resultado.getContent().get(0).alunoAtivo());
+        assertEquals("Aluno removido", resultado.getContent().get(1).alunoNome());
+        assertEquals("Usuário removido", resultado.getContent().get(1).usuarioNome());
+        assertFalse(resultado.getContent().get(1).alunoAtivo());
+    }
 }

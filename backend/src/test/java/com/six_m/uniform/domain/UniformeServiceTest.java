@@ -2,9 +2,13 @@ package com.six_m.uniform.domain;
 
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
+import com.six_m.uniform.domain.uniforme.CombinacaoUniforme;
+import com.six_m.uniform.domain.uniforme.EstoqueView;
+import com.six_m.uniform.domain.uniforme.SituacaoEstoque;
 import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeRepository;
 import com.six_m.uniform.domain.uniforme.UniformeService;
+import com.six_m.uniform.domain.uniforme.dto.ResponseEstoquePainelDTO;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
 import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
@@ -13,6 +17,7 @@ import com.six_m.uniform.shared.enums.Tamanho;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -290,4 +295,65 @@ public class UniformeServiceTest {
         assertTrue(response.estoqueBaixoAlerta());
     }
 
+    @Test
+    void deveConsiderarOProprioLimiteComoEstoqueBaixo() {
+        // CT07: 5 peças com limite 5 já é baixo; 6 não é; 0 é esgotado.
+        TipoUniforme tipo = TipoUniforme.builder().id(UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(5).build();
+
+        assertTrue(Uniforme.builder().tipoUniforme(tipo).quantidade(5).build().estaComEstoqueBaixo());
+        assertFalse(Uniforme.builder().tipoUniforme(tipo).quantidade(6).build().estaComEstoqueBaixo());
+
+        assertEquals(SituacaoEstoque.BAIXO, SituacaoEstoque.calcular(5, 5));
+        assertEquals(SituacaoEstoque.BAIXO, SituacaoEstoque.calcular(4, 5));
+        assertEquals(SituacaoEstoque.OK, SituacaoEstoque.calcular(6, 5));
+        assertEquals(SituacaoEstoque.ESGOTADO, SituacaoEstoque.calcular(0, 5));
+        assertEquals(SituacaoEstoque.ESGOTADO, SituacaoEstoque.calcular(0, 0));
+    }
+
+    @Test
+    void deveMontarOPainelAPartirDaView() {
+        UUID uniformeId = UUID.randomUUID();
+        UUID tipoId = UUID.randomUUID();
+        EstoqueView linha = mock(EstoqueView.class);
+        when(linha.getUniformeId()).thenReturn(uniformeId);
+        when(linha.getTipoUniformeId()).thenReturn(tipoId);
+        when(linha.getTipo()).thenReturn("Camiseta");
+        when(linha.getTamanho()).thenReturn("M");
+        when(linha.getSexo()).thenReturn("FEMININO");
+        when(linha.getQuantidade()).thenReturn(5);
+        when(linha.getEstoqueBaixo()).thenReturn(5);
+        when(linha.getSituacao()).thenReturn("BAIXO");
+        when(uniformeRepository.buscarPainelEstoque()).thenReturn(List.of(linha));
+
+        List<ResponseEstoquePainelDTO> painel = uniformeService.buscarPainelEstoque();
+
+        assertEquals(List.of(new ResponseEstoquePainelDTO(uniformeId, tipoId, "Camiseta", Tamanho.M, Sexo.FEMININO, 5, 5, SituacaoEstoque.BAIXO)), painel);
+    }
+
+    @Test
+    void deveTravarOEstoqueSempreNaMesmaOrdemSemRepetir() {
+        UUID menor = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID maior = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+        uniformeService.travarEstoque(List.of(maior, menor, maior));
+
+        InOrder ordem = inOrder(uniformeRepository);
+        ordem.verify(uniformeRepository).buscarComLockPorId(menor);
+        ordem.verify(uniformeRepository).buscarComLockPorId(maior);
+        verify(uniformeRepository, times(2)).buscarComLockPorId(any());
+    }
+
+    @Test
+    void deveTravarAsCombinacoesSempreNaMesmaOrdem() {
+        UUID tipo = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        CombinacaoUniforme g = new CombinacaoUniforme(tipo, Tamanho.G, Sexo.MASCULINO);
+        CombinacaoUniforme p = new CombinacaoUniforme(tipo, Tamanho.P, Sexo.FEMININO);
+
+        uniformeService.travarEstoquePorCombinacao(List.of(g, p, g));
+
+        InOrder ordem = inOrder(uniformeRepository);
+        ordem.verify(uniformeRepository).findByTipoUniformeIdAndTamanhoAndSexo(tipo, Tamanho.P, Sexo.FEMININO);
+        ordem.verify(uniformeRepository).findByTipoUniformeIdAndTamanhoAndSexo(tipo, Tamanho.G, Sexo.MASCULINO);
+        verify(uniformeRepository, times(2)).findByTipoUniformeIdAndTamanhoAndSexo(any(), any(), any());
+    }
 }

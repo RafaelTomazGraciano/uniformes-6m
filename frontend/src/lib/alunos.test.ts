@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { filtrarAluno, normalizar } from '@/lib/alunos'
 import type { Aluno } from '@/lib/types/aluno'
 
-const joana: Aluno = { id: 'a1', nome: 'Joana Conceição', turmaId: 't1', turmaNome: '6B' }
+const joana: Aluno = { id: 'a1', nome: 'Joana Conceição', turmaId: 't1', turmaNome: '6B', ativo: true }
 
 describe('normalizar', () => {
   it('remove acentos e caixa', () => {

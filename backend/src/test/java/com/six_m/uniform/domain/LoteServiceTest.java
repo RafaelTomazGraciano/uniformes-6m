@@ -12,6 +12,7 @@ import com.six_m.uniform.domain.lote.dto.ResponseLoteDTO;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscal;
 import com.six_m.uniform.domain.notaFiscal.NotaFiscalService;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
+import com.six_m.uniform.domain.uniforme.CombinacaoUniforme;
 import com.six_m.uniform.domain.uniforme.UniformeService;
 import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -204,5 +206,42 @@ public class LoteServiceTest {
         assertThrows(NotFoundException.class, () -> loteService.atualizarLote(loteId, dto));
         verify(notaFiscalService, never()).atualizarParaLote(any(), any());
         verify(itemLoteService, never()).buscarItensPorLote(any());
+    }
+
+    @Test
+    void deveUsarOMomentoAtualQuandoDataEntregaNaoEInformada() {
+        UUID tipoId = UUID.randomUUID();
+        RequestCriarLoteDTO dto = new RequestCriarLoteDTO("chave-1", "Fornecedor A", null,
+                List.of(new RequestItemEntradaDTO(tipoId, Tamanho.M, Sexo.MASCULINO, 10)));
+
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
+        when(notaFiscalService.criarParaLote("chave-1")).thenReturn(notaFiscal);
+        when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemLoteService.criarItensParaLote(any(Lote.class), eq(dto.itens()))).thenReturn(List.of());
+
+        LocalDateTime antes = LocalDateTime.now();
+        ResponseLoteDTO response = loteService.criarLote(dto);
+
+        assertNotNull(response.dataEntrega());
+        assertFalse(response.dataEntrega().isBefore(antes));
+        verify(uniformeService).travarEstoquePorCombinacao(List.of(new CombinacaoUniforme(tipoId, Tamanho.M, Sexo.MASCULINO)));
+    }
+
+    @Test
+    void deveManterADataOriginalAoAtualizarLoteSemData() {
+        UUID loteId = UUID.randomUUID();
+        LocalDateTime dataOriginal = LocalDateTime.of(2026, 3, 10, 8, 0);
+        NotaFiscal notaFiscal = NotaFiscal.builder().id(UUID.randomUUID()).chaveAcesso("chave-1").build();
+        Lote lote = Lote.builder().id(loteId).notaFiscal(notaFiscal).fornecedor("Fornecedor A").dataEntrega(dataOriginal).build();
+        RequestAtualizarLoteDTO dto = new RequestAtualizarLoteDTO("chave-1", "Fornecedor A", null,
+                List.of(new RequestItemEntradaDTO(UUID.randomUUID(), Tamanho.M, Sexo.MASCULINO, 1)));
+
+        when(loteRepository.findById(loteId)).thenReturn(Optional.of(lote));
+        when(notaFiscalService.atualizarParaLote(notaFiscal, "chave-1")).thenReturn(notaFiscal);
+        when(itemLoteService.buscarItensPorLote(loteId)).thenReturn(List.of());
+        when(itemLoteService.criarItensParaLote(lote, dto.itens())).thenReturn(List.of());
+        when(loteRepository.save(any(Lote.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertEquals(dataOriginal, loteService.atualizarLote(loteId, dto).dataEntrega());
     }
 }

@@ -7,18 +7,21 @@ import com.six_m.uniform.domain.lote.Lote;
 import com.six_m.uniform.domain.pedido.Pedido;
 import com.six_m.uniform.domain.pedidoUniforme.PedidoUniforme;
 import com.six_m.uniform.domain.pedidoUniforme.PedidoUniformeService;
+import com.six_m.uniform.domain.relatorio.FormatoRelatorio;
 import com.six_m.uniform.domain.relatorio.Periodo;
 import com.six_m.uniform.domain.relatorio.RelatorioPeriodoResolver;
 import com.six_m.uniform.domain.relatorio.RelatorioService;
 import com.six_m.uniform.domain.relatorio.dto.RelatorioFiltroDTO;
 import com.six_m.uniform.domain.tipoUniforme.TipoUniforme;
 import com.six_m.uniform.domain.turma.Turma;
+import com.six_m.uniform.domain.uniforme.SituacaoEstoque;
 import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeService;
-import com.six_m.uniform.exception.NotFoundException;
+import com.six_m.uniform.domain.uniforme.dto.ResponseEstoquePainelDTO;
 import com.six_m.uniform.shared.enums.Sexo;
 import com.six_m.uniform.shared.enums.Tamanho;
 import com.six_m.uniform.shared.enums.TipoFiltroRelatorio;
+import com.six_m.uniform.shared.csv.CsvTableBuilder;
 import com.six_m.uniform.shared.pdf.PdfTableBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,52 +54,87 @@ public class RelatorioServiceTest {
     @Mock
     private PdfTableBuilder pdfTableBuilder;
 
+    @Mock
+    private CsvTableBuilder csvTableBuilder;
+
     @InjectMocks
     private RelatorioService relatorioService;
 
     @Test
-    void deveGerarRelatorioEstoqueComSucesso() {
-        TipoUniforme tipo = TipoUniforme.builder().id(java.util.UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(5).build();
-        Uniforme uniforme = Uniforme.builder().tipoUniforme(tipo).tamanho(Tamanho.M).sexo(Sexo.MASCULINO).quantidade(10).build();
-
-        when(uniformeService.buscarTodosUniformesEntidades()).thenReturn(List.of(uniforme));
+    void deveGerarRelatorioEstoqueComSucessoAPartirDaView() {
+        when(uniformeService.buscarPainelEstoque()).thenReturn(List.of(linhaEstoque(10, 5, SituacaoEstoque.OK)));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1, 2, 3});
 
-        byte[] resultado = relatorioService.gerarRelatorioEstoque();
+        byte[] resultado = relatorioService.gerarRelatorioEstoque(FormatoRelatorio.PDF);
 
         assertNotNull(resultado);
         ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
         verify(pdfTableBuilder).gerarPdf(eq("Relatório de Estoque de Uniformes"), isNull(),
-                eq(List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Situação")), linhasCaptor.capture(), isNull());
+                eq(List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Limite", "Situação")), linhasCaptor.capture(),
+                eq(List.of("Total em estoque: 10 unidades")));
 
-        assertEquals(List.of("Camiseta", "M", "MASCULINO", "10", "OK"), linhasCaptor.getValue().getFirst());
+        assertEquals(List.of("Camiseta", "M", "Masculino", "10", "5", "OK"), linhasCaptor.getValue().getFirst());
+        verifyNoInteractions(csvTableBuilder);
     }
 
     @Test
-    void deveMarcarComoBaixoNoRelatorioQuandoQuantidadeEstaAbaixoDoMinimo() {
-        TipoUniforme tipo = TipoUniforme.builder().id(java.util.UUID.randomUUID()).tipo("Camiseta").estoqueBaixo(10).build();
-        Uniforme uniforme = Uniforme.builder().tipoUniforme(tipo).tamanho(Tamanho.P).sexo(Sexo.FEMININO).quantidade(3).build();
-
-        when(uniformeService.buscarTodosUniformesEntidades()).thenReturn(List.of(uniforme));
+    void deveUsarASituacaoDaViewNoRelatorioDeEstoque() {
+        when(uniformeService.buscarPainelEstoque()).thenReturn(List.of(
+                linhaEstoque(5, 5, SituacaoEstoque.BAIXO),
+                linhaEstoque(0, 5, SituacaoEstoque.ESGOTADO)));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        relatorioService.gerarRelatorioEstoque();
+        relatorioService.gerarRelatorioEstoque(FormatoRelatorio.PDF);
 
         ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
         verify(pdfTableBuilder).gerarPdf(any(), any(), any(), linhasCaptor.capture(), any());
 
-        assertEquals(List.of("Camiseta", "P", "FEMININO", "3", "BAIXO"), linhasCaptor.getValue().getFirst());
+        assertEquals("Baixo", linhasCaptor.getValue().get(0).get(5));
+        assertEquals("Esgotado", linhasCaptor.getValue().get(1).get(5));
     }
 
     @Test
-    void deveLancarExcecaoQuandoEstoqueVazio() {
-        when(uniformeService.buscarTodosUniformesEntidades()).thenReturn(List.of());
+    void deveGerarRelatorioEstoqueMesmoComEstoqueVazio() {
+        when(uniformeService.buscarPainelEstoque()).thenReturn(List.of());
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> relatorioService.gerarRelatorioEstoque());
+        byte[] resultado = relatorioService.gerarRelatorioEstoque(FormatoRelatorio.PDF);
 
-        assertEquals("Não há uniformes cadastrados no estoque", exception.getMessage());
-        verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+        assertNotNull(resultado);
+        verify(pdfTableBuilder).gerarPdf(eq("Relatório de Estoque de Uniformes"), isNull(),
+                eq(List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Limite", "Situação")), eq(List.of()),
+                eq(List.of("Total em estoque: 0 unidades")));
+    }
+
+    @Test
+    void deveGerarRelatorioEstoqueEmCsvQuandoFormatoForCsv() {
+        when(uniformeService.buscarPainelEstoque()).thenReturn(List.of());
+        when(csvTableBuilder.gerarCsv(any(), any(), any(), any(), any())).thenReturn(new byte[]{9});
+
+        byte[] resultado = relatorioService.gerarRelatorioEstoque(FormatoRelatorio.CSV);
+
+        assertArrayEquals(new byte[]{9}, resultado);
+        verify(csvTableBuilder).gerarCsv(eq("Relatório de Estoque de Uniformes"), isNull(),
+                eq(List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Limite", "Situação")), eq(List.of()), any());
+        verifyNoInteractions(pdfTableBuilder);
+    }
+
+    @Test
+    void deveFormatarQuantidadesComSeparadorDeMilharPtBr() {
+        when(uniformeService.buscarPainelEstoque()).thenReturn(List.of(linhaEstoque(1234, 5, SituacaoEstoque.OK)));
+        when(csvTableBuilder.gerarCsv(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
+
+        relatorioService.gerarRelatorioEstoque(FormatoRelatorio.CSV);
+
+        ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
+        verify(csvTableBuilder).gerarCsv(any(), any(), any(), linhasCaptor.capture(),
+                eq(List.of("Total em estoque: 1.234 unidades")));
+        assertEquals("1.234", linhasCaptor.getValue().getFirst().get(3));
+    }
+
+    private ResponseEstoquePainelDTO linhaEstoque(int quantidade, int limite, SituacaoEstoque situacao) {
+        return new ResponseEstoquePainelDTO(java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), "Camiseta",
+                Tamanho.M, Sexo.MASCULINO, quantidade, limite, situacao);
     }
 
     @Test
@@ -112,7 +150,7 @@ public class RelatorioServiceTest {
         when(itemLoteService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of(item));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        byte[] resultado = relatorioService.gerarRelatorioEntrada(filtro);
+        byte[] resultado = relatorioService.gerarRelatorioEntrada(filtro, FormatoRelatorio.PDF);
 
         assertNotNull(resultado);
         verify(pdfTableBuilder).gerarPdf(eq("Relatório de Entrada de Uniformes"), any(),
@@ -121,18 +159,19 @@ public class RelatorioServiceTest {
     }
 
     @Test
-    void deveLancarExcecaoQuandoNaoHaEntradasNoPeriodo() {
+    void deveGerarRelatorioEntradaVazioQuandoNaoHaEntradasNoPeriodo() {
         RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.MES, 2026, 3, null, null);
         Periodo periodo = new Periodo(LocalDateTime.of(2026, 3, 1, 0, 0), LocalDateTime.of(2026, 3, 31, 23, 59, 59));
 
         when(periodoResolver.resolver(filtro)).thenReturn(periodo);
         when(itemLoteService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of());
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> relatorioService.gerarRelatorioEntrada(filtro));
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        assertEquals("Não há registros de entrada de uniformes no período informado", exception.getMessage());
-        verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+        assertNotNull(relatorioService.gerarRelatorioEntrada(filtro, FormatoRelatorio.PDF));
+
+        verify(pdfTableBuilder).gerarPdf(eq("Relatório de Entrada de Uniformes"), eq("Período: 01/03/2026 a 31/03/2026"),
+                any(), eq(List.of()), eq(List.of("Total de entradas: 0 unidades")));
     }
 
     @Test
@@ -150,7 +189,7 @@ public class RelatorioServiceTest {
         when(pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of(item));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        byte[] resultado = relatorioService.gerarRelatorioSaida(filtro);
+        byte[] resultado = relatorioService.gerarRelatorioSaida(filtro, FormatoRelatorio.PDF);
 
         assertNotNull(resultado);
         verify(pdfTableBuilder).gerarPdf(eq("Relatório de Saída de Uniformes"), any(),
@@ -159,17 +198,20 @@ public class RelatorioServiceTest {
     }
 
     @Test
-    void deveLancarExcecaoQuandoNaoHaSaidasNoPeriodo() {
+    void deveGerarRelatorioSaidaVazioEmCsvQuandoNaoHaSaidasNoPeriodo() {
         RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.ANO, 2026, null, null, null);
         Periodo periodo = new Periodo(LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2026, 12, 31, 23, 59, 59));
 
         when(periodoResolver.resolver(filtro)).thenReturn(periodo);
         when(pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of());
 
-        assertThrows(NotFoundException.class,
-                () -> relatorioService.gerarRelatorioSaida(filtro));
+        when(csvTableBuilder.gerarCsv(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+        assertNotNull(relatorioService.gerarRelatorioSaida(filtro, FormatoRelatorio.CSV));
+
+        verify(csvTableBuilder).gerarCsv(eq("Relatório de Saída de Uniformes"), any(),
+                eq(List.of("Data", "Aluno", "Tipo", "Tamanho", "Sexo", "Quantidade")), eq(List.of()),
+                eq(List.of("Total de saídas: 0 unidades")));
     }
 
     @Test
@@ -187,7 +229,7 @@ public class RelatorioServiceTest {
                 .thenReturn(List.of(itemB, itemA1, itemA2));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        byte[] resultado = relatorioService.gerarRelatorioEntregasPorTurma(filtro, null);
+        byte[] resultado = relatorioService.gerarRelatorioEntregasPorTurma(filtro, null, FormatoRelatorio.PDF);
 
         assertNotNull(resultado);
         ArgumentCaptor<List<List<String>>> linhasCaptor = ArgumentCaptor.forClass(List.class);
@@ -213,14 +255,14 @@ public class RelatorioServiceTest {
                 .thenReturn(List.of(entregaDe("6º A", "Bruna", 4, LocalDateTime.of(2026, 5, 12, 9, 0))));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId);
+        relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId, FormatoRelatorio.PDF);
 
         verify(pedidoUniformeService).buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId);
         verify(pedidoUniformeService, never()).buscarItensPorPeriodo(any(), any());
     }
 
     @Test
-    void deveLancarExcecaoQuandoNaoHaEntregasDaTurmaNoPeriodo() {
+    void deveGerarRelatorioDeEntregasVazioQuandoNaoHaEntregasDaTurmaNoPeriodo() {
         RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.ANO, 2026, null, null, null);
         Periodo periodo = new Periodo(LocalDateTime.of(2026, 1, 1, 0, 0), LocalDateTime.of(2026, 12, 31, 23, 59, 59));
         java.util.UUID turmaId = java.util.UUID.randomUUID();
@@ -229,10 +271,12 @@ public class RelatorioServiceTest {
         when(pedidoUniformeService.buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId))
                 .thenReturn(List.of());
 
-        assertThrows(NotFoundException.class,
-                () -> relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId));
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+        assertNotNull(relatorioService.gerarRelatorioEntregasPorTurma(filtro, turmaId, FormatoRelatorio.PDF));
+
+        verify(pdfTableBuilder).gerarPdf(eq("Relatório de Entregas por Turma"), any(), any(), eq(List.of()),
+                eq(List.of("Total de entregas: 0 unidades")));
     }
 
     private PedidoUniforme entregaDe(String nomeTurma, String nomeAluno, int quantidade, LocalDateTime data) {
@@ -264,7 +308,7 @@ public class RelatorioServiceTest {
         when(pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of(saida));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        byte[] resultado = relatorioService.gerarRelatorioTransacoes(filtro);
+        byte[] resultado = relatorioService.gerarRelatorioTransacoes(filtro, FormatoRelatorio.PDF);
 
         assertNotNull(resultado);
         verify(pdfTableBuilder).gerarPdf(eq("Relatório de Transações de Uniformes"), any(),
@@ -292,7 +336,7 @@ public class RelatorioServiceTest {
         when(pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of(saida));
         when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        relatorioService.gerarRelatorioTransacoes(filtro);
+        relatorioService.gerarRelatorioTransacoes(filtro, FormatoRelatorio.PDF);
 
         verify(pdfTableBuilder).gerarPdf(any(), any(), any(), any(),
                 eq(List.of(
@@ -303,7 +347,7 @@ public class RelatorioServiceTest {
     }
 
     @Test
-    void deveLancarExcecaoQuandoNaoHaEntradasNemSaidasNoPeriodoParaTransacoes() {
+    void deveGerarRelatorioDeTransacoesVazioQuandoNaoHaMovimentoNoPeriodo() {
         RelatorioFiltroDTO filtro = new RelatorioFiltroDTO(TipoFiltroRelatorio.MES, 2026, 3, null, null);
         Periodo periodo = new Periodo(LocalDateTime.of(2026, 3, 1, 0, 0), LocalDateTime.of(2026, 3, 31, 23, 59, 59));
 
@@ -311,10 +355,15 @@ public class RelatorioServiceTest {
         when(itemLoteService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of());
         when(pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())).thenReturn(List.of());
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> relatorioService.gerarRelatorioTransacoes(filtro));
+        when(pdfTableBuilder.gerarPdf(any(), any(), any(), any(), any())).thenReturn(new byte[]{1});
 
-        assertEquals("Não há transações de uniformes no período informado", exception.getMessage());
-        verify(pdfTableBuilder, never()).gerarPdf(any(), any(), any(), any(), any());
+        assertNotNull(relatorioService.gerarRelatorioTransacoes(filtro, FormatoRelatorio.PDF));
+
+        verify(pdfTableBuilder).gerarPdf(eq("Relatório de Transações de Uniformes"), any(), any(), eq(List.of()),
+                eq(List.of(
+                        "Total de entradas: 0 unidades",
+                        "Total de saídas: 0 unidades",
+                        "Saldo do período: +0 unidades"
+                )));
     }
 }

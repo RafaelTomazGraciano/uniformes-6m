@@ -2,13 +2,14 @@ package com.six_m.uniform.domain.usuario;
 
 import com.six_m.uniform.domain.usuario.dto.*;
 import com.six_m.uniform.exception.BadRequestException;
-import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,16 +37,21 @@ public class UsuarioService {
 
     @Transactional
     public ResponseUsuarioDTO atualizarUsuario(RequestAtualizarUsuarioDTO dto) throws BadRequestException {
-        if (usuarioRepository.findByEmail(dto.email()).isPresent()) {
-            throw new BadRequestException("Este email já está em uso");
-        }
-
         String emailAutenticado = SecurityContextHolder.getContext()
                 .getAuthentication()
                 .getName();
 
         Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
                 .orElseThrow(() -> new BadRequestException("Este email não existe"));
+
+        // Manter o próprio email é permitido; só bloqueia se ele pertence a outro usuário.
+        UUID idUsuario = usuario.getId();
+        boolean emailDeOutroUsuario = usuarioRepository.findByEmail(dto.email())
+                .filter(existente -> !existente.getId().equals(idUsuario))
+                .isPresent();
+        if (emailDeOutroUsuario) {
+            throw new BadRequestException("Este email já está em uso");
+        }
 
         usuario.setNome(dto.nome());
         usuario.setEmail(dto.email());
@@ -57,8 +63,10 @@ public class UsuarioService {
 
     @Transactional
     public MessageResponseDTO trocarSenha(RequestTrocarSenhaDTO dto) {
+        // Mesma mensagem para email inexistente e senha errada: não revela quais emails existem.
         Usuario usuario = usuarioRepository.findByEmail(dto.email())
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado com o email informado"));
+                .filter(encontrado -> passwordEncoder.matches(dto.senhaAtual(), encontrado.getSenha()))
+                .orElseThrow(() -> new BadRequestException("Senha atual incorreta"));
 
         usuario.setSenha(passwordEncoder.encode(dto.novaSenha()));
         usuarioRepository.save(usuario);

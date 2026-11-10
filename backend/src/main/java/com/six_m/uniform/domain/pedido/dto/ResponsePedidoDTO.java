@@ -10,6 +10,7 @@ public record ResponsePedidoDTO(
         UUID id,
         UUID alunoId,
         String alunoNome,
+        boolean alunoAtivo,
         UUID usuarioId,
         String usuarioNome,
         LocalDateTime dataEfetivada,

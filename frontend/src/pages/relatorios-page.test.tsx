@@ -5,10 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/services/relatorio-service')
 vi.mock('@/services/turma-service')
 vi.mock('sonner', () => ({
-  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+  toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-import { ApiError } from '@/lib/api-client'
 import { RelatoriosPage } from '@/pages/relatorios-page'
 import * as relatorioService from '@/services/relatorio-service'
 import * as turmaService from '@/services/turma-service'
@@ -16,6 +15,7 @@ import { renderWithProviders } from '@/test/render'
 import { toast } from 'sonner'
 
 const pdf = new Blob(['%PDF'], { type: 'application/pdf' })
+const csv = new Blob(['\uFEFFTipo;Tamanho'], { type: 'text/csv' })
 
 const turmaA = { id: 't1', nome: '9º Ano A', turno: 'DIURNO' as const, ensino: 'FUNDAMENTAL' as const, quantidadeAlunos: 0 }
 const turmaB = { id: 't2', nome: '6º Ano B', turno: 'VESPERTINO' as const, ensino: 'FUNDAMENTAL' as const, quantidadeAlunos: 0 }
@@ -27,9 +27,10 @@ function cardDe(titulo: string) {
   return cabecalho.closest('[data-slot="card"]') as HTMLElement
 }
 
-function cardBotao(titulo: string) {
+function cardBotao(titulo: string, formato: 'pdf' | 'csv' = 'pdf') {
   // Pelo nome, não pelo primeiro button: o card de turma tem um select antes.
-  return within(cardDe(titulo)).getByRole('button', { name: /baixar pdf|gerando/i })
+  const nome = formato === 'pdf' ? 'Baixar PDF' : 'Baixar CSV (Excel)'
+  return within(cardDe(titulo)).getByRole('button', { name: nome })
 }
 
 describe('RelatoriosPage', () => {
@@ -46,8 +47,35 @@ describe('RelatoriosPage', () => {
 
     await user.click(cardBotao('Estoque'))
 
-    await waitFor(() => expect(relatorioService.baixarRelatorioEstoque).toHaveBeenCalled())
+    await waitFor(() => expect(relatorioService.baixarRelatorioEstoque).toHaveBeenCalledWith('pdf'))
     expect(relatorioService.salvarArquivo).toHaveBeenCalledWith(pdf, 'relatorio-estoque.pdf')
+  })
+
+  it('baixa o estoque em CSV para o Excel, com a extensão .csv', async () => {
+    vi.mocked(relatorioService.baixarRelatorioEstoque).mockResolvedValue(csv)
+    const user = userEvent.setup()
+    renderWithProviders(<RelatoriosPage />)
+
+    await user.click(cardBotao('Estoque', 'csv'))
+
+    await waitFor(() => expect(relatorioService.baixarRelatorioEstoque).toHaveBeenCalledWith('csv'))
+    expect(relatorioService.salvarArquivo).toHaveBeenCalledWith(csv, 'relatorio-estoque.csv')
+  })
+
+  it('escolhe o formato em cada relatório com período', async () => {
+    vi.mocked(relatorioService.baixarRelatorioComPeriodo).mockResolvedValue(csv)
+    const user = userEvent.setup()
+    renderWithProviders(<RelatoriosPage />)
+
+    await user.click(cardBotao('Entregas por turma', 'csv'))
+
+    await waitFor(() => expect(relatorioService.baixarRelatorioComPeriodo).toHaveBeenCalled())
+    const [relatorio, periodo, turmaId, formato] = vi.mocked(relatorioService.baixarRelatorioComPeriodo).mock.calls[0]
+    expect(relatorio).toBe('entregas-turma')
+    expect(periodo.anoInicio).toBe(new Date().getFullYear())
+    expect(turmaId).toBeUndefined()
+    expect(formato).toBe('csv')
+    expect(relatorioService.salvarArquivo).toHaveBeenCalledWith(csv, 'relatorio-entregas-turma.csv')
   })
 
   it('envia o período escolhido nos relatórios que dependem dele', async () => {
@@ -58,24 +86,22 @@ describe('RelatoriosPage', () => {
 
     await waitFor(() => expect(relatorioService.baixarRelatorioComPeriodo).toHaveBeenCalled())
 
-    const [relatorio, periodo] = vi.mocked(relatorioService.baixarRelatorioComPeriodo).mock.calls[0]
+    const [relatorio, periodo, , formato] = vi.mocked(relatorioService.baixarRelatorioComPeriodo).mock.calls[0]
     expect(relatorio).toBe('saida')
+    expect(formato).toBe('pdf')
     expect(periodo.tipo).toBe('MES')
     expect(periodo.anoInicio).toBe(new Date().getFullYear())
   })
 
-  it('trata período sem movimento como aviso, não como erro', async () => {
-    vi.mocked(relatorioService.baixarRelatorioComPeriodo).mockRejectedValue(
-      new ApiError('Não há registros de saída no período informado', 404),
-    )
+  it('mostra o erro quando o relatório não pode ser gerado', async () => {
+    vi.mocked(relatorioService.baixarRelatorioComPeriodo).mockRejectedValue(new Error('Falha ao gerar o relatório'))
 
     const user = userEvent.setup()
     renderWithProviders(<RelatoriosPage />)
 
-    await user.click(cardBotao('Saídas'))
+    await user.click(cardBotao('Saídas', 'csv'))
 
-    await waitFor(() => expect(toast.info).toHaveBeenCalledWith('Não há registros de saída no período informado'))
-    expect(toast.error).not.toHaveBeenCalled()
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Falha ao gerar o relatório'))
     expect(relatorioService.salvarArquivo).not.toHaveBeenCalled()
   })
 

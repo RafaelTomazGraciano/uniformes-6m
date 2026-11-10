@@ -1,6 +1,7 @@
 import {
   Boxes,
   ClipboardList,
+  FileInput,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -38,6 +39,8 @@ const grupos = [
       { title: 'Entradas', url: '/entradas', icon: PackagePlus },
       { title: 'Entregas', url: '/pedidos', icon: ClipboardList },
       { title: 'Estoque', url: '/estoque', icon: Boxes },
+      // Quando o estoque não dá conta, pede-se ao fornecedor.
+      { title: 'Requisições', url: '/requisicoes', icon: FileInput },
     ],
   },
   {

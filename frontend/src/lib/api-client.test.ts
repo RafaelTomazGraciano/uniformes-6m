@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({
   getStoredSession: vi.fn(),
-  clearStoredSession: vi.fn(),
+  expireSession: vi.fn(),
 }))
 
 import { ApiError, apiFetch } from '@/lib/api-client'
-import { clearStoredSession, getStoredSession } from '@/lib/auth'
+import { expireSession, getStoredSession } from '@/lib/auth'
 
 describe('apiFetch', () => {
   beforeEach(() => {
@@ -51,6 +51,7 @@ describe('apiFetch', () => {
     await expect(apiFetch('/aluno')).rejects.toMatchObject(
       expect.objectContaining({ message: 'Turma não encontrada' }),
     )
+    expect(expireSession).not.toHaveBeenCalled()
   })
 
   it('clears the stored session on 401 responses', async () => {
@@ -63,6 +64,6 @@ describe('apiFetch', () => {
     )
 
     await expect(apiFetch('/aluno')).rejects.toBeInstanceOf(ApiError)
-    expect(clearStoredSession).toHaveBeenCalled()
+    expect(expireSession).toHaveBeenCalled()
   })
 })

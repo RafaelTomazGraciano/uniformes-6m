@@ -23,6 +23,33 @@ export type RegisterPayload = {
 const AUTH_STORAGE_KEY = 'uniformes-auth-session'
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 
+/** Disparado na própria aba quando a sessão é encerrada por expiração ou 401.
+    O evento `storage` só chega às outras abas, então a aba atual precisa deste. */
+export const SESSION_CLEARED_EVENT = 'auth:session-cleared'
+
+export const MENSAGEM_SESSAO_EXPIRADA = 'Sua sessão expirou. Entre novamente.'
+
+/** Lê o `exp` (em segundos) do payload do JWT. Só decodifica, não valida a assinatura:
+    quem valida é o backend. Devolve null se o token estiver malformado ou sem `exp`. */
+export function getTokenExpiration(token: string): number | null {
+  const payload = token.split('.')[1]
+  if (!payload) return null
+
+  try {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    const json = JSON.parse(atob(padded)) as { exp?: unknown }
+    return typeof json.exp === 'number' ? json.exp : null
+  } catch {
+    return null
+  }
+}
+
+export function isTokenExpired(token: string, agoraMs = Date.now()): boolean {
+  const exp = getTokenExpiration(token)
+  return exp !== null && exp * 1000 <= agoraMs
+}
+
 export function getStoredSession(): AuthSession | null {
   const raw = localStorage.getItem(AUTH_STORAGE_KEY)
 
@@ -31,7 +58,15 @@ export function getStoredSession(): AuthSession | null {
   }
 
   try {
-    return JSON.parse(raw) as AuthSession
+    const session = JSON.parse(raw) as AuthSession
+
+    // Token vencido guardado de outra visita: sem isso a tela abria "logada" e toda consulta voltava vazia.
+    if (!session?.token || isTokenExpired(session.token)) {
+      localStorage.removeItem(AUTH_STORAGE_KEY)
+      return null
+    }
+
+    return session
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY)
     return null
@@ -44,6 +79,12 @@ export function setStoredSession(session: AuthSession) {
 
 export function clearStoredSession() {
   localStorage.removeItem(AUTH_STORAGE_KEY)
+}
+
+/** Encerra a sessão por expiração (401 da API ou `exp` atingido) e avisa a aba atual. */
+export function expireSession() {
+  clearStoredSession()
+  window.dispatchEvent(new CustomEvent(SESSION_CLEARED_EVENT))
 }
 
 async function parseErrorMessage(response: Response) {

@@ -14,6 +14,8 @@ export type Pedido = {
   id: string
   alunoId: string
   alunoNome: string
+  /** `false` quando o aluno já saiu: a entrega segue no histórico, mas não cabe uma nova. */
+  alunoAtivo: boolean
   usuarioId: string
   usuarioNome: string
   dataEfetivada: string

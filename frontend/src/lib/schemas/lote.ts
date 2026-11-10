@@ -4,7 +4,7 @@ export const itemEntradaSchema = z.object({
   tipoUniformeId: z.string().min(1, 'Selecione o tipo.'),
   tamanho: z.enum(['PP', 'P', 'M', 'G', 'GG'], { message: 'Selecione o tamanho.' }),
   sexo: z.enum(['MASCULINO', 'FEMININO'], { message: 'Selecione o sexo.' }),
-  quantidade: z.number({ message: 'Informe a quantidade.' }).int().min(1, 'Quantidade mínima é 1.'),
+  quantidade: z.number({ message: 'Informe a quantidade.' }).int().min(1, 'Quantidade é obrigatória (mínimo 1).'),
 })
 
 export const loteSchema = z.object({

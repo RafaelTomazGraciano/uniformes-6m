@@ -18,6 +18,8 @@ import { NovaEntregaPage } from '@/pages/nova-entrega-page'
 import { PedidosPage } from '@/pages/pedidos-page'
 import { RegisterPage } from '@/pages/register-page'
 import { RelatoriosPage } from '@/pages/relatorios-page'
+import { RequisicaoFormPage } from '@/pages/requisicao-form-page'
+import { RequisicoesPage } from '@/pages/requisicoes-page'
 import { TipoUniformeFormPage } from '@/pages/tipo-uniforme-form-page'
 import { TiposUniformePage } from '@/pages/tipos-uniforme-page'
 import { TrocarSenhaPage } from '@/pages/trocar-senha-page'
@@ -41,7 +43,7 @@ const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/login" replace />, errorElement: <NotFoundPage /> },
   { path: '/login', element: <LoginPage />, errorElement: <NotFoundPage /> },
   { path: '/register', element: <RegisterPage />, errorElement: <NotFoundPage /> },
-  // Pública: é também o caminho de quem esqueceu a senha e não consegue entrar.
+  // Pública (sem token), mas exige a senha atual da conta.
   { path: '/trocar-senha', element: <TrocarSenhaPage />, errorElement: <NotFoundPage /> },
 
   protegida('/dashboard', <DashboardPage />),
@@ -53,6 +55,8 @@ const router = createBrowserRouter([
   protegida('/entradas/nova', <EntradaFormPage />),
   protegida('/entradas/:id/editar', <EntradaFormPage />),
   protegida('/estoque', <EstoquePage />),
+  protegida('/requisicoes', <RequisicoesPage />),
+  protegida('/requisicoes/nova', <RequisicaoFormPage />),
   protegida('/alunos', <AlunosPage />),
   protegida('/alunos/novo', <AlunoFormPage />),
   protegida('/alunos/:id/editar', <AlunoFormPage />),
@@ -64,9 +68,6 @@ const router = createBrowserRouter([
   protegida('/tipos-uniforme/:id/editar', <TipoUniformeFormPage />),
   protegida('/relatorios', <RelatoriosPage />),
   protegida('/conta', <ContaPage />),
-
-  // Links antigos continuam funcionando.
-  { path: '/requisicoes/nova', element: <Navigate to="/pedidos/nova" replace /> },
 
   { path: '*', element: <NotFoundPage /> },
 ])

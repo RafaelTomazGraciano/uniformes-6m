@@ -4,7 +4,6 @@ import com.six_m.uniform.domain.usuario.Usuario;
 import com.six_m.uniform.domain.usuario.UsuarioRepository;
 import com.six_m.uniform.domain.usuario.UsuarioService;
 import com.six_m.uniform.domain.usuario.dto.RequestTrocarSenhaDTO;
-import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestAtualizarUsuarioDTO;
 import com.six_m.uniform.domain.usuario.dto.RequestRegistrarUsuarioDTO;
@@ -135,11 +134,18 @@ public class UsuarioServiceTest {
     void deveLancarExcecaoQuandoEmailJaExisteAoAtualizar() {
         RequestAtualizarUsuarioDTO dto = new RequestAtualizarUsuarioDTO("Rafael", "existente@teste.com");
 
+        Usuario usuarioAutenticado = Usuario.builder()
+                .id(UUID.randomUUID())
+                .email("rafael@teste.com")
+                .build();
         Usuario outroUsuario = Usuario.builder()
                 .id(UUID.randomUUID())
                 .email("existente@teste.com")
                 .build();
 
+        autenticarComo("rafael@teste.com");
+
+        when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuarioAutenticado));
         when(usuarioRepository.findByEmail(dto.email())).thenReturn(Optional.of(outroUsuario));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -150,12 +156,34 @@ public class UsuarioServiceTest {
     }
 
     @Test
+    void devePermitirManterOProprioEmailAoAtualizar() {
+        RequestAtualizarUsuarioDTO dto = new RequestAtualizarUsuarioDTO("Rafael Atualizado", "rafael@teste.com");
+
+        UUID id = UUID.randomUUID();
+        Usuario usuarioExistente = Usuario.builder()
+                .id(id)
+                .nome("Rafael")
+                .email("rafael@teste.com")
+                .build();
+
+        autenticarComo("rafael@teste.com");
+
+        when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuarioExistente));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseUsuarioDTO response = usuarioService.atualizarUsuario(dto);
+
+        assertEquals(id, response.idUsuario());
+        assertEquals("Rafael Atualizado", response.nome());
+        assertEquals("rafael@teste.com", response.email());
+    }
+
+    @Test
     void deveLancarExcecaoQuandoUsuarioAutenticadoNaoExisteAoAtualizar() {
         RequestAtualizarUsuarioDTO dto = new RequestAtualizarUsuarioDTO("Rafael", "novo@teste.com");
 
         autenticarComo("fantasma@teste.com");
 
-        when(usuarioRepository.findByEmail(dto.email())).thenReturn(Optional.empty());
         when(usuarioRepository.findByEmail("fantasma@teste.com")).thenReturn(Optional.empty());
 
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -167,7 +195,7 @@ public class UsuarioServiceTest {
 
     @Test
     void deveTrocarSenhaComSucesso() {
-        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "novaSenha123");
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "senhaAntiga", "novaSenha123");
 
         Usuario usuario = Usuario.builder()
                 .id(UUID.randomUUID())
@@ -177,6 +205,7 @@ public class UsuarioServiceTest {
                 .build();
 
         when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senhaAntiga", "senha-antiga-criptografada")).thenReturn(true);
         when(passwordEncoder.encode("novaSenha123")).thenReturn("senha-nova-criptografada");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -187,7 +216,7 @@ public class UsuarioServiceTest {
 
     @Test
     void deveCriptografarNovaSenhaAntesDeSalvarAoTrocarSenha() {
-        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "senha-pura-nova");
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "senhaAntiga", "senha-pura-nova");
 
         Usuario usuario = Usuario.builder()
                 .id(UUID.randomUUID())
@@ -197,6 +226,7 @@ public class UsuarioServiceTest {
                 .build();
 
         when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senhaAntiga", "senha-antiga-criptografada")).thenReturn(true);
         when(passwordEncoder.encode("senha-pura-nova")).thenReturn("senha-nova-encriptada");
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -211,14 +241,37 @@ public class UsuarioServiceTest {
 
     @Test
     void deveLancarExcecaoQuandoUsuarioNaoExisteAoTrocarSenha() {
-        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("naoexiste@teste.com", "novaSenha123");
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("naoexiste@teste.com", "qualquer", "novaSenha123");
 
         when(usuarioRepository.findByEmail("naoexiste@teste.com")).thenReturn(Optional.empty());
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
+        BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> usuarioService.trocarSenha(dto));
 
-        assertEquals("Usuário não encontrado com o email informado", exception.getMessage());
+        // Mesma mensagem da senha errada: não revela se o email está cadastrado.
+        assertEquals("Senha atual incorreta", exception.getMessage());
+        verify(usuarioRepository, never()).save(any());
+        verify(passwordEncoder, never()).encode(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoSenhaAtualIncorretaAoTrocarSenha() {
+        RequestTrocarSenhaDTO dto = new RequestTrocarSenhaDTO("rafael@teste.com", "senhaErrada", "novaSenha123");
+
+        Usuario usuario = Usuario.builder()
+                .id(UUID.randomUUID())
+                .email("rafael@teste.com")
+                .senha("senha-antiga-criptografada")
+                .build();
+
+        when(usuarioRepository.findByEmail("rafael@teste.com")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senhaErrada", "senha-antiga-criptografada")).thenReturn(false);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> usuarioService.trocarSenha(dto));
+
+        assertEquals("Senha atual incorreta", exception.getMessage());
+        assertEquals("senha-antiga-criptografada", usuario.getSenha());
         verify(usuarioRepository, never()).save(any());
         verify(passwordEncoder, never()).encode(any());
     }

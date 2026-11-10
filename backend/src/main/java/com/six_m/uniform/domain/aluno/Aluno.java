@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -35,4 +36,15 @@ public class Aluno {
 
     @Builder.Default
     private Boolean deletado = false;
+
+    /* Aluno que saiu da escola fica inativo em vez de ser excluído: as entregas
+       que ele recebeu continuam apontando para este cadastro. */
+    @Builder.Default
+    private Boolean ativo = true;
+
+    private LocalDateTime dataSaida;
+
+    public boolean isAtivo() {
+        return !Boolean.FALSE.equals(ativo);
+    }
 }

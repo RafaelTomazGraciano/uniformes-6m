@@ -9,6 +9,9 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.http.*;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -182,15 +185,128 @@ class FluxoCompletoIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(9)
-    void deveRetornar404QuandoNaoHaTransacoesNoPeriodo() throws Exception {
+    void deveGerarArquivoValidoMesmoSemTransacoesNoPeriodo() throws Exception {
+        HttpEntity<Void> entidade = new HttpEntity<>(headersComToken(token));
+        ResponseEntity<byte[]> pdf = rest.exchange(
+                baseUrl() + "/relatorio/transacoes?tipo=ANO&anoInicio=2020",
+                HttpMethod.GET, entidade, byte[].class);
+
+        assertThat(pdf.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(new String(pdf.getBody(), 0, 4)).isEqualTo("%PDF");
+
+        ResponseEntity<byte[]> csv = rest.exchange(
+                baseUrl() + "/relatorio/transacoes?tipo=ANO&anoInicio=2020&formato=csv",
+                HttpMethod.GET, entidade, byte[].class);
+
+        assertThat(csv.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(new String(csv.getBody(), StandardCharsets.UTF_8))
+                .contains("Data;Tipo;Descrição;Quantidade\r\nNenhum registro encontrado");
+    }
+
+    @Test
+    @Order(10)
+    void deveGerarRelatorioDeEstoqueEmCsvParaOExcel() {
+        HttpEntity<Void> entidade = new HttpEntity<>(headersComToken(token));
+        ResponseEntity<byte[]> response = rest.exchange(
+                baseUrl() + "/relatorio/estoque?formato=csv", HttpMethod.GET, entidade, byte[].class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType().isCompatibleWith(MediaType.parseMediaType("text/csv"))).isTrue();
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION)).contains("relatorio-estoque.csv");
+
+        byte[] csv = response.getBody();
+        assertThat(java.util.Arrays.copyOf(csv, 3)).containsExactly(0xEF, 0xBB, 0xBF);
+        assertThat(new String(csv, StandardCharsets.UTF_8))
+                .contains("Tipo;Tamanho;Sexo;Quantidade;Limite;Situação\r\n")
+                .contains("Camiseta;M;Masculino;15;10;OK");
+    }
+
+    @Test
+    @Order(11)
+    void deveRecusarFormatoDeRelatorioInvalido() throws Exception {
         HttpEntity<Void> entidade = new HttpEntity<>(headersComToken(token));
         ResponseEntity<String> response = rest.exchange(
-                baseUrl() + "/relatorio/transacoes?tipo=ANO&anoInicio=2020",
-                HttpMethod.GET, entidade, String.class);
+                baseUrl() + "/relatorio/estoque?formato=xls", HttpMethod.GET, entidade, String.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(campo(response.getBody(), "message"))
-                .isEqualTo("Não há transações de uniformes no período informado");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(campo(response.getBody(), "message")).isEqualTo("Formato de relatório inválido: use pdf ou csv");
+    }
+
+    @Test
+    @Order(12)
+    void deveSomarLinhasRepetidasEPreencherADataQuandoEntregaVemSemData() throws Exception {
+        String corpo = """
+                {
+                  "alunoId": "%s",
+                  "itens": [
+                    { "uniformeId": "%s", "quantidade": 2 },
+                    { "uniformeId": "%s", "quantidade": 3 }
+                  ]
+                }
+                """.formatted(alunoId, uniformeId, uniformeId);
+
+        ResponseEntity<String> response = rest.postForEntity(baseUrl() + "/pedido", requisicao(corpo, token), String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode pedido = objectMapper.readTree(response.getBody());
+        assertThat(pedido.get("dataEfetivada").isNull()).isFalse();
+        assertThat(pedido.get("itens")).hasSize(1);
+        assertThat(pedido.get("itens").get(0).get("quantidade").asInt()).isEqualTo(5);
+    }
+
+    @Test
+    @Order(13)
+    void deveMarcarComoBaixoNoPainelQuandoQuantidadeEIgualAoLimite() throws Exception {
+        // 20 - 5 - 5 = 10 peças, com limite 10: o próprio limite já conta como baixo (CT07).
+        HttpEntity<Void> entidade = new HttpEntity<>(headersComToken(token));
+        ResponseEntity<String> response = rest.exchange(
+                baseUrl() + "/uniforme/painel", HttpMethod.GET, entidade, String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode linha = objectMapper.readTree(response.getBody()).get(0);
+        assertThat(linha.get("uniformeId").asText()).isEqualTo(uniformeId);
+        assertThat(linha.get("tipoUniformeNome").asText()).isEqualTo("Camiseta");
+        assertThat(linha.get("quantidade").asInt()).isEqualTo(10);
+        assertThat(linha.get("estoqueBaixo").asInt()).isEqualTo(10);
+        assertThat(linha.get("situacao").asText()).isEqualTo("BAIXO");
+
+        ResponseEntity<String> uniforme = rest.exchange(
+                baseUrl() + "/uniforme/" + uniformeId, HttpMethod.GET, entidade, String.class);
+        assertThat(objectMapper.readTree(uniforme.getBody()).get("estoqueBaixoAlerta").asBoolean()).isTrue();
+    }
+
+    @Test
+    @Order(14)
+    void deveListarNoRelatorioDoMesAEntregaRegistradaSemData() {
+        LocalDate hoje = LocalDate.now();
+        HttpEntity<Void> entidade = new HttpEntity<>(headersComToken(token));
+        ResponseEntity<byte[]> response = rest.exchange(
+                baseUrl() + "/relatorio/saida?tipo=MES&anoInicio=" + hoje.getYear() + "&mesInicio=" + hoje.getMonthValue() + "&formato=csv",
+                HttpMethod.GET, entidade, byte[].class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(new String(response.getBody(), StandardCharsets.UTF_8))
+                .contains(";João da Silva;Camiseta;M;Masculino;5\r\n")
+                .contains("Total de saídas: 5 unidades");
+    }
+
+    @Test
+    @Order(15)
+    void deveRecusarEntregaQuandoASomaDasLinhasRepetidasPassaDoEstoque() throws Exception {
+        String corpo = """
+                {
+                  "alunoId": "%s",
+                  "itens": [
+                    { "uniformeId": "%s", "quantidade": 6 },
+                    { "uniformeId": "%s", "quantidade": 6 }
+                  ]
+                }
+                """.formatted(alunoId, uniformeId, uniformeId);
+
+        ResponseEntity<String> response = rest.postForEntity(baseUrl() + "/pedido", requisicao(corpo, token), String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(campo(response.getBody(), "message")).contains("(12)").contains("(10)");
     }
 
     private HttpEntity<String> requisicao(String corpo, String tokenOpcional) {
