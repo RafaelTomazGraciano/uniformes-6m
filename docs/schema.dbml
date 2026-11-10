@@ -1,0 +1,162 @@
+// Uniformes 6M — schema final (migrations V1–V5)
+// Cole em https://dbdiagram.io para regenerar o DER (docs/DER.png).
+
+Enum sexo {
+  MASCULINO
+  FEMININO
+}
+
+Enum tamanho {
+  PP
+  P
+  M
+  G
+  GG
+}
+
+Enum tipo_escola {
+  PUBLICA
+  TECNICA
+  PARCEIRA
+  CIVICO_MILITAR
+  MILITAR
+}
+
+Enum turno {
+  DIURNO
+  VESPERTINO
+  NOTURNO
+  INTEGRAL
+}
+
+Enum ensino {
+  FUNDAMENTAL
+  MEDIO
+  TECNICO
+}
+
+Enum status_requisicao {
+  PENDENTE
+  ATENDIDA
+  CANCELADA
+}
+
+Table escola {
+  id uuid [pk, default: `gen_random_uuid()`]
+  nome varchar(255) [not null]
+  tipo tipo_escola [not null]
+  endereco varchar(255) [not null]
+}
+
+Table usuario {
+  id uuid [pk, default: `gen_random_uuid()`]
+  nome varchar(255) [not null]
+  email varchar(255) [unique, not null]
+  senha varchar(255) [not null]
+  deletado bool [not null, default: false]
+}
+
+Table tipo_uniforme {
+  id uuid [pk, default: `gen_random_uuid()`]
+  tipo varchar(255) [not null, note: 'único (lower)']
+  estoque_baixo int [not null, note: 'limite de reposição do tipo']
+}
+
+Table uniforme {
+  id uuid [pk, default: `gen_random_uuid()`]
+  tipo_id uuid [not null]
+  tamanho tamanho [not null]
+  quantidade int [not null, default: 0, note: 'CHECK >= 0']
+  sexo sexo [not null]
+
+  indexes {
+    (tipo_id, tamanho, sexo) [unique, name: 'uq_uniforme_tipo_tamanho_sexo']
+  }
+}
+
+Table turma {
+  id uuid [pk, default: `gen_random_uuid()`]
+  nome varchar(255) [not null, note: 'único (lower)']
+  turno turno [not null]
+  ensino ensino [not null]
+}
+
+Table aluno {
+  id uuid [pk, default: `gen_random_uuid()`]
+  turma_id uuid [not null]
+  nome varchar(255) [not null]
+  nome_responsavel varchar(255)
+  telefone_responsavel varchar(11)
+  deletado bool [not null, default: false]
+  ativo bool [not null, default: true]
+  data_saida timestamp
+
+  indexes {
+    nome [name: 'idx_nome']
+    ativo [name: 'idx_aluno_ativo']
+  }
+}
+
+Table pedido {
+  id uuid [pk, default: `gen_random_uuid()`]
+  aluno_id uuid [not null]
+  usuario_id uuid [not null]
+  data_efetivada timestamp [not null, default: `now()`]
+}
+
+Table pedido_uniforme {
+  id uuid [pk, default: `gen_random_uuid()`]
+  uniforme_id uuid [not null]
+  pedido_id uuid [not null]
+  quantidade int [not null, note: 'CHECK > 0']
+}
+
+Table nota_fiscal {
+  id uuid [pk, default: `gen_random_uuid()`]
+  chave_acesso varchar(255) [not null]
+}
+
+Table lote {
+  id uuid [pk, default: `gen_random_uuid()`]
+  nota_fiscal_id uuid [not null]
+  fornecedor varchar(255) [not null]
+  data_entrega timestamp [not null, default: `now()`]
+}
+
+Table item_lote {
+  id uuid [pk, default: `gen_random_uuid()`]
+  tipo_uniforme_id uuid [not null]
+  lote_id uuid [not null]
+  tamanho tamanho [not null]
+  quantidade int [not null, default: 0, note: 'CHECK > 0']
+  sexo sexo [not null]
+}
+
+Table requisicao {
+  id uuid [pk, default: `gen_random_uuid()`]
+  tipo_uniforme_id uuid [not null]
+  tamanho tamanho [not null]
+  sexo sexo [not null]
+  quantidade int [not null, note: 'CHECK > 0']
+  observacao text
+  status status_requisicao [not null, default: 'PENDENTE']
+  usuario_id uuid [not null]
+  data_criacao timestamp [not null, default: `now()`]
+  data_conclusao timestamp
+
+  indexes {
+    status [name: 'idx_requisicao_status']
+  }
+}
+
+Ref: uniforme.tipo_id > tipo_uniforme.id
+Ref: aluno.turma_id > turma.id
+Ref: pedido_uniforme.uniforme_id > uniforme.id
+Ref: pedido_uniforme.pedido_id > pedido.id
+Ref: pedido.aluno_id > aluno.id
+Ref: pedido.usuario_id > usuario.id
+Ref: item_lote.tipo_uniforme_id > tipo_uniforme.id
+Ref: item_lote.lote_id > lote.id
+Ref: lote.nota_fiscal_id > nota_fiscal.id
+Ref: requisicao.tipo_uniforme_id > tipo_uniforme.id
+Ref: requisicao.usuario_id > usuario.id
