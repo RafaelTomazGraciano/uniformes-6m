@@ -5,7 +5,7 @@ export function atualizarUsuario(payload: AtualizarUsuarioPayload): Promise<Usua
   return apiFetch('/usuario/atualizar', { method: 'PUT', body: payload })
 }
 
-/** Não exige autenticação: é também o caminho de "esqueci minha senha". */
+/** Não exige token, mas exige a senha atual: sem ela, qualquer um que soubesse o e-mail trocaria a senha. */
 export function trocarSenha(payload: TrocarSenhaPayload): Promise<{ message: string }> {
   return apiFetch('/usuario/trocar-senha', { method: 'PUT', body: payload })
 }

@@ -49,11 +49,10 @@ public class UsuarioController {
     }
 
     @PutMapping("/trocar-senha")
-    @Operation(summary = "Trocar senha", description = "Atualiza a senha do usuário identificado pelo email informado. Não exige autenticação")
+    @Operation(summary = "Trocar senha", description = "Atualiza a senha do usuário identificado pelo email, exigindo a senha atual. Não exige token")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado com o email informado")
+            @ApiResponse(responseCode = "400", description = "Dados inválidos, ou email/senha atual incorretos (\"Senha atual incorreta\")")
     })
     public ResponseEntity<MessageResponseDTO> trocarSenha(@Valid @RequestBody RequestTrocarSenhaDTO request) {
         MessageResponseDTO response = usuarioService.trocarSenha(request);

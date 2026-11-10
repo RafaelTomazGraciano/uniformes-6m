@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -22,4 +23,19 @@ public interface UniformeRepository extends JpaRepository<Uniforme, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Uniforme u where u.id = :id")
     Optional<Uniforme> buscarComLockPorId(@Param("id") UUID id);
+
+    /* Os enums do Postgres viram texto aqui para a projeção não depender de como o driver os entrega. */
+    @Query(value = """
+            select v.uniforme_id as "uniformeId",
+                   v.tipo_uniforme_id as "tipoUniformeId",
+                   v.tipo as "tipo",
+                   v.tamanho::text as "tamanho",
+                   v.sexo::text as "sexo",
+                   v.quantidade as "quantidade",
+                   v.estoque_baixo as "estoqueBaixo",
+                   v.situacao as "situacao"
+            from vw_estoque v
+            order by lower(v.tipo), v.tamanho, v.sexo
+            """, nativeQuery = true)
+    List<EstoqueView> buscarPainelEstoque();
 }

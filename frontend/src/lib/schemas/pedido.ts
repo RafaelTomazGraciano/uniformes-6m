@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const pedidoItemSchema = z.object({
   uniformeId: z.string().min(1, 'Escolha a peça e o tamanho.'),
-  quantidade: z.number({ message: 'Informe a quantidade.' }).int().min(1, 'Quantidade mínima é 1.'),
+  quantidade: z.number({ message: 'Informe a quantidade.' }).int().min(1, 'Quantidade é obrigatória (mínimo 1).'),
 })
 
 /* A mesma peça pode aparecer em várias linhas: o backend soma as repetições

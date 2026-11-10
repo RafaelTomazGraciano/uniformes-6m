@@ -2,6 +2,7 @@ package com.six_m.uniform.config;
 
 import java.util.List;
 
+import com.six_m.uniform.security.RestAuthenticationEntryPoint;
 import com.six_m.uniform.security.SecurityFilter;
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +30,8 @@ public class SecurityConfig {
     private List<String> allowedOrigins;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityFilter securityFilter) {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityFilter securityFilter,
+                                                   RestAuthenticationEntryPoint authenticationEntryPoint) {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -41,6 +43,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/usuario/trocar-senha").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())
+                // Sem token, token inválido ou expirado -> 401. Autenticado sem permissão continua 403.
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

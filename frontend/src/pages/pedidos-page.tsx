@@ -7,9 +7,12 @@ import { DetalheEntregaSheet } from '@/components/pedidos/detalhe-entrega-sheet'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/components/shared/estados-lista'
 import { Paginacao } from '@/components/shared/paginacao'
 import { ResumoItens } from '@/components/shared/resumo-itens'
+import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { usePedidosQuery } from '@/hooks/use-pedidos'
+import { LimiteErro } from '@/components/shared/limite-erro'
 import { formatarDataHora } from '@/lib/format'
+import type { Pedido } from '@/lib/types/pedido'
 
 const POR_PAGINA = 20
 
@@ -68,31 +71,19 @@ export function PedidosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.content.map((pedido) => (
-                  <TableRow key={pedido.id} data-state={pedido.id === verId ? 'selected' : undefined}>
-                    <TableCell className="font-medium">
-                      <Link
-                        to={`?${new URLSearchParams({ ...Object.fromEntries(searchParams), ver: pedido.id })}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {pedido.alunoNome}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <ResumoItens
-                        itens={pedido.itens.map((item) => ({
-                          chave: item.id,
-                          nome: item.uniformeTipoUniformeNome,
-                          tamanho: item.uniformeTamanho,
-                          quantidade: item.quantidade,
-                        }))}
-                      />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{pedido.usuarioNome}</TableCell>
-                    <TableCell className="whitespace-nowrap" data-numeric>
-                      {formatarDataHora(pedido.dataEfetivada)}
-                    </TableCell>
-                  </TableRow>
+                {(data.content ?? []).map((pedido, indice) => (
+                  <LimiteErro
+                    key={pedido?.id ?? `linha-${indice}`}
+                    fallback={
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-sm text-muted-foreground">
+                          Não foi possível exibir esta entrega.
+                        </TableCell>
+                      </TableRow>
+                    }
+                  >
+                    <LinhaEntrega pedido={pedido} selecionado={pedido?.id === verId} searchParams={searchParams} />
+                  </LimiteErro>
                 ))}
               </TableBody>
             </Table>
@@ -111,5 +102,48 @@ export function PedidosPage() {
 
       <DetalheEntregaSheet pedidoId={verId} onClose={() => atualizarParams((params) => params.delete('ver'))} />
     </AppLayout>
+  )
+}
+
+/* Cada linha se defende sozinha: um campo faltando vira "—" em vez de derrubar a lista. */
+function LinhaEntrega({
+  pedido,
+  selecionado,
+  searchParams,
+}: {
+  pedido: Pedido
+  selecionado: boolean
+  searchParams: URLSearchParams
+}) {
+  const itens = pedido.itens ?? []
+
+  return (
+    <TableRow data-state={selecionado ? 'selected' : undefined}>
+      <TableCell className="font-medium">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to={`?${new URLSearchParams({ ...Object.fromEntries(searchParams), ver: pedido.id })}`}
+            className="underline-offset-4 hover:underline"
+          >
+            {pedido.alunoNome || 'Aluno não identificado'}
+          </Link>
+          {pedido.alunoAtivo === false && <Badge variant="outline">Saiu</Badge>}
+        </div>
+      </TableCell>
+      <TableCell>
+        <ResumoItens
+          itens={itens.map((item) => ({
+            chave: item.id,
+            nome: item.uniformeTipoUniformeNome ?? '—',
+            tamanho: item.uniformeTamanho,
+            quantidade: item.quantidade ?? 0,
+          }))}
+        />
+      </TableCell>
+      <TableCell className="text-muted-foreground">{pedido.usuarioNome || '—'}</TableCell>
+      <TableCell className="whitespace-nowrap" data-numeric>
+        {formatarDataHora(pedido.dataEfetivada)}
+      </TableCell>
+    </TableRow>
   )
 }

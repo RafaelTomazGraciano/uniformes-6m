@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
     Page<Pedido> findByAlunoId(UUID alunoId, Pageable pageable);
+
+    boolean existsByAlunoId(UUID alunoId);
 }

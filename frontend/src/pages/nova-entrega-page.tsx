@@ -20,12 +20,15 @@ import { agruparPecas, novaLinha, temErros, validarEntrega, type ErrosEntrega, t
 
 type Modo = 'lista' | 'catalogo'
 
+const MENSAGEM_ALUNO_INDISPONIVEL = 'Este aluno não pode receber entregas (a saída dele foi registrada). Escolha outro aluno.'
+
 export function NovaEntregaPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const modo: Modo = searchParams.get('modo') === 'catalogo' ? 'catalogo' : 'lista'
 
-  const alunos = useAllAlunosQuery()
+  /* Só alunos ativos: quem já saiu mantém o histórico, mas não recebe entrega nova. */
+  const alunos = useAllAlunosQuery({ ativo: true })
   const uniformes = useAllUniformesQuery()
   const createMutation = useCreatePedidoMutation()
 
@@ -41,6 +44,8 @@ export function NovaEntregaPage() {
   const total = preenchidas.reduce((soma, linha) => soma + linha.quantidade, 0)
   const alterado = Boolean(alunoId) || preenchidas.length > 0
   const aluno = alunos.data?.find((candidato) => candidato.id === alunoId)
+  /* Link antigo (?aluno=) para quem já saiu: avisa em vez de deixar o envio falhar. */
+  const alunoIndisponivel = Boolean(alunos.data && alunoId && !aluno)
 
   /* Depois da primeira tentativa de envio, os erros acompanham a edição. */
   function mudarLinhas(proximas: LinhaEntrega[]) {
@@ -65,6 +70,7 @@ export function NovaEntregaPage() {
     /* Linhas totalmente em branco são ignoradas; peça sem tamanho vira erro na linha. */
     const limpas = linhas.filter((linha) => linha.uniformeId || linha.grupo)
     const resultado = validarEntrega(alunoId, limpas, porId)
+    if (alunoIndisponivel && !resultado.aluno) resultado.aluno = MENSAGEM_ALUNO_INDISPONIVEL
     setErros(resultado)
 
     if (temErros(resultado)) {
@@ -132,7 +138,7 @@ export function NovaEntregaPage() {
                 setAlunoId(id)
                 if (erros) setErros(validarEntrega(id, linhas, porId))
               }}
-              errorMessage={erros?.aluno}
+              errorMessage={erros?.aluno ?? (alunoIndisponivel ? MENSAGEM_ALUNO_INDISPONIVEL : undefined)}
             />
           </div>
 

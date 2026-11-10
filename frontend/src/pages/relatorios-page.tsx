@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Download } from 'lucide-react'
+import { Download, FileSpreadsheet } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { SelectItens } from '@/components/shared/select-itens'
 import { useTurmasQuery } from '@/hooks/use-turmas'
-import { ApiError } from '@/lib/api-client'
 import { turnoLabels } from '@/lib/labels'
 import { toSelectItems } from '@/lib/select-items'
 import { periodoSchema, type PeriodoFormValues } from '@/lib/schemas/relatorio'
@@ -19,6 +18,7 @@ import {
   baixarRelatorioComPeriodo,
   baixarRelatorioEstoque,
   salvarArquivo,
+  type FormatoRelatorio,
   type RelatorioComPeriodo,
 } from '@/services/relatorio-service'
 
@@ -83,40 +83,34 @@ export function RelatoriosPage() {
     },
   })
 
-  async function baixar(relatorio: Relatorio, periodo?: PeriodoFormValues) {
-    setBaixando(relatorio.chave)
+  async function baixar(relatorio: Relatorio, formato: FormatoRelatorio, periodo?: PeriodoFormValues) {
+    setBaixando(`${relatorio.chave}-${formato}`)
 
     try {
       const turma = relatorio.usaTurma && turmaId !== TODAS_AS_TURMAS ? turmaId : undefined
       const blob =
         relatorio.chave === 'estoque'
-          ? await baixarRelatorioEstoque()
-          : await baixarRelatorioComPeriodo(relatorio.chave, periodo!, turma)
+          ? await baixarRelatorioEstoque(formato)
+          : await baixarRelatorioComPeriodo(relatorio.chave, periodo!, turma, formato)
 
-      salvarArquivo(blob, `relatorio-${relatorio.chave}.pdf`)
+      // Período sem movimento também gera arquivo: o backend escreve "Nenhum registro encontrado".
+      salvarArquivo(blob, `relatorio-${relatorio.chave}.${formato}`)
       toast.success(`Relatório de ${relatorio.titulo.toLowerCase()} baixado.`)
     } catch (error) {
-      /* 404 aqui não é falha: é o backend dizendo que não houve movimento no
-         período. Tratar como erro vermelho faria o usuário procurar um defeito. */
-      if (error instanceof ApiError && error.status === 404) {
-        toast.info(error.message)
-        return
-      }
-
       toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o relatório.')
     } finally {
       setBaixando(null)
     }
   }
 
-  function aoClicar(relatorio: Relatorio) {
+  function aoClicar(relatorio: Relatorio, formato: FormatoRelatorio) {
     if (!relatorio.usaPeriodo) {
-      void baixar(relatorio)
+      void baixar(relatorio, formato)
       return
     }
 
     // Os campos de período são compartilhados: valida uma vez, na hora de usar.
-    void form.handleSubmit((periodo) => baixar(relatorio, periodo))()
+    void form.handleSubmit((periodo) => baixar(relatorio, formato, periodo))()
   }
 
   const itensTurma = [
@@ -125,7 +119,7 @@ export function RelatoriosPage() {
   ]
 
   return (
-    <AppLayout title="Relatórios" description="Documentos em PDF para prestação de contas e conferência.">
+    <AppLayout title="Relatórios" description="Documentos em PDF para prestação de contas, ou planilha CSV para abrir no Excel.">
       <div className="space-y-4">
         <FiltroPeriodo form={form} />
 
@@ -152,14 +146,20 @@ export function RelatoriosPage() {
                   </div>
                 )}
 
-                <Button
-                  variant={relatorio.usaPeriodo ? 'default' : 'outline'}
-                  disabled={baixando !== null}
-                  onClick={() => aoClicar(relatorio)}
-                >
-                  <Download className="size-4" />
-                  {baixando === relatorio.chave ? 'Gerando...' : 'Baixar PDF'}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={relatorio.usaPeriodo ? 'default' : 'outline'}
+                    disabled={baixando !== null}
+                    onClick={() => aoClicar(relatorio, 'pdf')}
+                  >
+                    <Download className="size-4" />
+                    {baixando === `${relatorio.chave}-pdf` ? 'Gerando...' : 'Baixar PDF'}
+                  </Button>
+                  <Button variant="outline" disabled={baixando !== null} onClick={() => aoClicar(relatorio, 'csv')}>
+                    <FileSpreadsheet className="size-4" />
+                    {baixando === `${relatorio.chave}-csv` ? 'Gerando...' : 'Baixar CSV (Excel)'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

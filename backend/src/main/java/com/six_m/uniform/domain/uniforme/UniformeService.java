@@ -1,6 +1,7 @@
 package com.six_m.uniform.domain.uniforme;
 
 import com.six_m.uniform.domain.tipoUniforme.TipoUniformeService;
+import com.six_m.uniform.domain.uniforme.dto.ResponseEstoquePainelDTO;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
 import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +33,33 @@ public class UniformeService {
     @Transactional(readOnly = true)
     public ResponseUniformeDTO buscarUniforme(UUID id) {
         return toResponseDTO(buscarUniformeEntidade(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ResponseEstoquePainelDTO> buscarPainelEstoque() {
+        return uniformeRepository.buscarPainelEstoque().stream()
+                .map(this::toPainelDTO)
+                .toList();
+    }
+
+    /* Duas entregas com várias peças travando as mesmas linhas em ordem diferente
+       se esperam para sempre (deadlock). Travando tudo de antemão, sempre na mesma
+       ordem, a segunda só espera a primeira terminar. Linhas que não existem são
+       ignoradas: quem as usa depois é que responde com 404. */
+    @Transactional
+    public void travarEstoque(Collection<UUID> uniformeIds) {
+        uniformeIds.stream()
+                .distinct()
+                .sorted()
+                .forEach(uniformeRepository::buscarComLockPorId);
+    }
+
+    @Transactional
+    public void travarEstoquePorCombinacao(Collection<CombinacaoUniforme> combinacoes) {
+        combinacoes.stream()
+                .distinct()
+                .sorted()
+                .forEach(c -> uniformeRepository.findByTipoUniformeIdAndTamanhoAndSexo(c.tipoUniformeId(), c.tamanho(), c.sexo()));
     }
 
     @Transactional
@@ -92,6 +121,19 @@ public class UniformeService {
     @Transactional(readOnly = true)
     public List<Uniforme> buscarTodosUniformesEntidades() {
         return uniformeRepository.findAll();
+    }
+
+    private ResponseEstoquePainelDTO toPainelDTO(EstoqueView linha) {
+        return new ResponseEstoquePainelDTO(
+                linha.getUniformeId(),
+                linha.getTipoUniformeId(),
+                linha.getTipo(),
+                Tamanho.valueOf(linha.getTamanho()),
+                Sexo.valueOf(linha.getSexo()),
+                linha.getQuantidade(),
+                linha.getEstoqueBaixo(),
+                SituacaoEstoque.valueOf(linha.getSituacao())
+        );
     }
 
     private ResponseUniformeDTO toResponseDTO(Uniforme uniforme) {

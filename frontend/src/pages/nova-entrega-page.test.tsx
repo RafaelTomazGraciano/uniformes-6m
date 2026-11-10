@@ -10,7 +10,7 @@ import { NovaEntregaPage } from '@/pages/nova-entrega-page'
 import * as alunoService from '@/services/aluno-service'
 import * as pedidoService from '@/services/pedido-service'
 import * as uniformeService from '@/services/uniforme-service'
-import { maria, uniforme } from '@/test/fixtures'
+import { maria, pedro, uniforme } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
 
 const camisetaM = uniforme({ id: 'u1', tamanho: 'M', quantidade: 5 })
@@ -41,11 +41,31 @@ describe('NovaEntregaPage', () => {
       id: 'p1',
       alunoId: maria.id,
       alunoNome: maria.nome,
+      alunoAtivo: true,
       usuarioId: 'u',
       usuarioNome: 'Ana',
       dataEfetivada: '2026-10-18T10:00:00',
       itens: [],
     })
+  })
+
+  it('só oferece alunos ativos para a entrega', async () => {
+    vi.mocked(alunoService.listAllAlunos).mockResolvedValue([maria, pedro])
+    const user = userEvent.setup()
+    renderWithProviders(<NovaEntregaPage />)
+
+    const campo = screen.getByLabelText('Aluno')
+    await waitFor(() => expect(campo).toBeEnabled())
+    expect(alunoService.listAllAlunos).toHaveBeenCalledWith({ ativo: true })
+
+    await user.type(campo, 'Pedro')
+    expect(screen.queryByRole('option', { name: /Pedro Alves/i })).not.toBeInTheDocument()
+  })
+
+  it('avisa quando o link aponta para um aluno que já saiu', async () => {
+    renderWithProviders(<NovaEntregaPage />, { rota: '/?aluno=a3' })
+
+    expect(await screen.findByText(/a saída dele foi registrada/i)).toBeInTheDocument()
   })
 
   it('aceita a mesma peça em duas linhas com quantidades diferentes', async () => {

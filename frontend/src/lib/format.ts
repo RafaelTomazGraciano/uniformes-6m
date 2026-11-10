@@ -32,6 +32,15 @@ export function formatarData(valor: string | null | undefined): string {
   return Number.isNaN(data.getTime()) ? '—' : dataCurta.format(data)
 }
 
+const dataCompleta = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+/** "15/03/2026". */
+export function formatarDataCompleta(valor: string | null | undefined): string {
+  if (!valor) return '—'
+  const data = new Date(valor)
+  return Number.isNaN(data.getTime()) ? '—' : dataCompleta.format(data)
+}
+
 /* O backend espera LocalDateTime, que não carrega fuso. Mandar o ISO com "Z"
    faria o servidor guardar o horário UTC e, à noite, o dia errado. */
 export function paraLocalDateTime(data: Date): string {

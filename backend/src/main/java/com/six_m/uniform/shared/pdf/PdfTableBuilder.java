@@ -2,6 +2,7 @@ package com.six_m.uniform.shared.pdf;
 
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
@@ -17,6 +18,8 @@ import java.util.List;
 
 @Component
 public class PdfTableBuilder {
+
+    public static final String NENHUM_REGISTRO = "Nenhum registro encontrado";
 
     public byte[] gerarPdf(String titulo, String descricaoPeriodo, List<String> cabecalhos,
                            List<List<String>> linhas, List<String> totais) {
@@ -69,6 +72,17 @@ public class PdfTableBuilder {
         }
 
         Font fonteLinha = new Font(Font.HELVETICA, 10);
+
+        /* Período sem movimento não é erro: o documento sai assim mesmo, dizendo
+           que não houve registro, porque também serve de prestação de contas. */
+        if (linhas.isEmpty()) {
+            PdfPCell celula = new PdfPCell(new Phrase(NENHUM_REGISTRO, new Font(Font.HELVETICA, 10, Font.ITALIC)));
+            celula.setColspan(cabecalhos.size());
+            celula.setHorizontalAlignment(Element.ALIGN_CENTER);
+            celula.setPadding(8);
+            tabela.addCell(celula);
+        }
+
         for (List<String> linha : linhas) {
             for (String valor : linha) {
                 PdfPCell celula = new PdfPCell(new Phrase(valor, fonteLinha));

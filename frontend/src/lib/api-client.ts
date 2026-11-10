@@ -1,4 +1,4 @@
-import { clearStoredSession, getStoredSession } from '@/lib/auth'
+import { expireSession, getStoredSession } from '@/lib/auth'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'
 
@@ -39,8 +39,10 @@ async function request(path: string, options: ApiFetchOptions = {}): Promise<Res
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   })
 
+  /* 401 = token ausente, inválido ou vencido. Avisa sempre (mesmo sem token no storage,
+     que pode ter acabado de ser descartado por `exp`) para a aba atual sair da área logada. */
   if (response.status === 401) {
-    clearStoredSession()
+    expireSession()
   }
 
   if (!response.ok) {

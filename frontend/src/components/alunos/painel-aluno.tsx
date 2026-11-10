@@ -1,12 +1,13 @@
-import { Pencil, Plus, X } from 'lucide-react'
+import { LogOut, Pencil, Plus, RotateCcw, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { BadgeSaida } from '@/components/alunos/situacao-aluno'
 import { ButtonLink } from '@/components/shared/button-link'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePedidosDoAlunoQuery } from '@/hooks/use-pedidos'
-import { formatarData, formatarTelefone } from '@/lib/format'
+import { formatarData, formatarDataCompleta, formatarTelefone } from '@/lib/format'
 import type { Aluno } from '@/lib/types/aluno'
 
 function iniciais(nome: string) {
@@ -14,8 +15,17 @@ function iniciais(nome: string) {
   return `${partes[0]?.[0] ?? ''}${partes.length > 1 ? partes[partes.length - 1][0] : ''}`.toUpperCase()
 }
 
-/** Ficha do aluno ao lado da lista: dados, histórico e o atalho para nova entrega. */
-export function PainelAluno({ aluno, onFechar }: { aluno: Aluno; onFechar: () => void }) {
+type PainelAlunoProps = {
+  aluno: Aluno
+  onFechar: () => void
+  onRegistrarSaida?: () => void
+  onReativar?: () => void
+  reativando?: boolean
+}
+
+/** Ficha do aluno ao lado da lista: dados, histórico e o atalho para nova entrega.
+    Para quem já saiu, o histórico continua aqui; só a nova entrega some. */
+export function PainelAluno({ aluno, onFechar, onRegistrarSaida, onReativar, reativando }: PainelAlunoProps) {
   const { data, isLoading, isError } = usePedidosDoAlunoQuery(aluno.id)
   const pedidos = data?.content ?? []
   const pecas = pedidos.reduce((soma, pedido) => soma + pedido.itens.reduce((parcial, item) => parcial + item.quantidade, 0), 0)
@@ -32,21 +42,44 @@ export function PainelAluno({ aluno, onFechar }: { aluno: Aluno; onFechar: () =>
               {aluno.nome}
             </h2>
             <p className="text-sm text-muted-foreground">{aluno.turmaNome}</p>
+            <BadgeSaida aluno={aluno} className="mt-1.5" />
           </div>
           <Button variant="ghost" size="icon" aria-label="Fechar ficha do aluno" onClick={onFechar}>
             <X aria-hidden />
           </Button>
         </div>
 
+        {!aluno.ativo && (
+          <p className="rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground">
+            Saída registrada em {formatarDataCompleta(aluno.dataSaida)}. O histórico de entregas continua abaixo; para
+            registrar uma nova entrega, reative o cadastro.
+          </p>
+        )}
+
         <div className="flex flex-wrap gap-2">
-          <ButtonLink size="lg" className="flex-1" to={`/pedidos/nova?aluno=${aluno.id}`}>
-            <Plus aria-hidden />
-            Nova entrega
-          </ButtonLink>
+          {aluno.ativo ? (
+            <ButtonLink size="lg" className="flex-1" to={`/pedidos/nova?aluno=${aluno.id}`}>
+              <Plus aria-hidden />
+              Nova entrega
+            </ButtonLink>
+          ) : (
+            onReativar && (
+              <Button size="lg" className="flex-1" disabled={reativando} onClick={onReativar}>
+                <RotateCcw aria-hidden />
+                {reativando ? 'Reativando…' : 'Reativar'}
+              </Button>
+            )
+          )}
           <ButtonLink variant="outline" size="lg" to={`/alunos/${aluno.id}/editar`}>
             <Pencil aria-hidden />
             Editar
           </ButtonLink>
+          {aluno.ativo && onRegistrarSaida && (
+            <Button variant="ghost" size="lg" className="w-full" onClick={onRegistrarSaida}>
+              <LogOut aria-hidden />
+              Registrar saída
+            </Button>
+          )}
         </div>
 
         {(aluno.nomeResponsavel || aluno.telefoneResponsavel) && (
@@ -89,7 +122,7 @@ export function PainelAluno({ aluno, onFechar }: { aluno: Aluno; onFechar: () =>
           {isError && <p className="text-sm text-destructive">Não foi possível carregar o histórico.</p>}
           {!isLoading && !isError && pedidos.length === 0 && (
             <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              Este aluno ainda não recebeu uniforme.
+              {aluno.ativo ? 'Este aluno ainda não recebeu uniforme.' : 'Este aluno não recebeu uniforme.'}
             </p>
           )}
           <ol className="flex flex-col">

@@ -5,18 +5,20 @@ import com.six_m.uniform.domain.itemLote.ItemLoteService;
 import com.six_m.uniform.domain.pedidoUniforme.PedidoUniforme;
 import com.six_m.uniform.domain.pedidoUniforme.PedidoUniformeService;
 import com.six_m.uniform.domain.relatorio.dto.RelatorioFiltroDTO;
-import com.six_m.uniform.domain.uniforme.Uniforme;
 import com.six_m.uniform.domain.uniforme.UniformeService;
-import com.six_m.uniform.exception.NotFoundException;
+import com.six_m.uniform.domain.uniforme.dto.ResponseEstoquePainelDTO;
+import com.six_m.uniform.shared.csv.CsvTableBuilder;
 import com.six_m.uniform.shared.pdf.PdfTableBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,46 +27,46 @@ import java.util.UUID;
 public class RelatorioService {
 
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final Locale PT_BR = Locale.of("pt", "BR");
 
     private final UniformeService uniformeService;
     private final ItemLoteService itemLoteService;
     private final PedidoUniformeService pedidoUniformeService;
     private final RelatorioPeriodoResolver periodoResolver;
     private final PdfTableBuilder pdfTableBuilder;
+    private final CsvTableBuilder csvTableBuilder;
 
-    public byte[] gerarRelatorioEstoque() {
-        List<Uniforme> uniformes = uniformeService.buscarTodosUniformesEntidades();
+    /* Lê a view vw_estoque, que já traz a situação calculada. Estoque vazio não é
+       erro: o documento sai com o cabeçalho e a indicação de que não há registros. */
+    public byte[] gerarRelatorioEstoque(FormatoRelatorio formato) {
+        List<ResponseEstoquePainelDTO> estoque = uniformeService.buscarPainelEstoque();
 
-        if (uniformes.isEmpty()) {
-            throw new NotFoundException("Não há uniformes cadastrados no estoque");
-        }
-
-        List<List<String>> linhas = uniformes.stream()
-                .map(u -> List.of(
-                        u.getTipoUniforme().getTipo(),
-                        u.getTamanho().name(),
-                        u.getSexo().name(),
-                        String.valueOf(u.getQuantidade()),
-                        u.estaComEstoqueBaixo() ? "BAIXO" : "OK"
+        List<List<String>> linhas = estoque.stream()
+                .map(e -> List.of(
+                        e.tipoUniformeNome(),
+                        e.tamanho().name(),
+                        rotulo(e.sexo()),
+                        numero(e.quantidade()),
+                        numero(e.estoqueBaixo()),
+                        rotulo(e.situacao())
                 ))
                 .toList();
 
-        return pdfTableBuilder.gerarPdf(
+        int totalPecas = estoque.stream().mapToInt(ResponseEstoquePainelDTO::quantidade).sum();
+
+        return gerar(formato,
                 "Relatório de Estoque de Uniformes",
                 null,
-                List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Situação"),
+                List.of("Tipo", "Tamanho", "Sexo", "Quantidade", "Limite", "Situação"),
                 linhas,
-                null
+                List.of("Total em estoque: " + unidades(totalPecas))
         );
     }
 
-    public byte[] gerarRelatorioEntrada(RelatorioFiltroDTO filtro) {
+    public byte[] gerarRelatorioEntrada(RelatorioFiltroDTO filtro, FormatoRelatorio formato) {
         Periodo periodo = periodoResolver.resolver(filtro);
         List<ItemLote> itens = itemLoteService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim());
 
-        if (itens.isEmpty()) {
-            throw new NotFoundException("Não há registros de entrada de uniformes no período informado");
-        }
 
         List<List<String>> linhas = itens.stream()
                 .sorted(Comparator.comparing(i -> i.getLote().getDataEntrega()))
@@ -73,85 +75,79 @@ public class RelatorioService {
                         i.getLote().getFornecedor(),
                         i.getTipoUniforme().getTipo(),
                         i.getTamanho().name(),
-                        i.getSexo().name(),
-                        String.valueOf(i.getQuantidade())
+                        rotulo(i.getSexo()),
+                        numero(i.getQuantidade())
                 ))
                 .toList();
 
         int totalEntrada = itens.stream().mapToInt(ItemLote::getQuantidade).sum();
 
-        return pdfTableBuilder.gerarPdf(
+        return gerar(formato,
                 "Relatório de Entrada de Uniformes",
                 descricaoPeriodo(periodo),
                 List.of("Data", "Fornecedor", "Tipo", "Tamanho", "Sexo", "Quantidade"),
                 linhas,
-                List.of("Total de entradas: " + totalEntrada + " unidades")
+                List.of("Total de entradas: " + unidades(totalEntrada))
         );
     }
 
-    public byte[] gerarRelatorioSaida(RelatorioFiltroDTO filtro) {
+    public byte[] gerarRelatorioSaida(RelatorioFiltroDTO filtro, FormatoRelatorio formato) {
         Periodo periodo = periodoResolver.resolver(filtro);
         List<PedidoUniforme> itens = pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim());
 
-        if (itens.isEmpty()) {
-            throw new NotFoundException("Não há registros de saída de uniformes no período informado");
-        }
 
         List<List<String>> linhas = itens.stream()
                 .sorted(Comparator.comparing(i -> i.getPedido().getDataEfetivada()))
                 .map(i -> List.of(
                         i.getPedido().getDataEfetivada().format(FORMATO_DATA),
-                        i.getPedido().getAluno().getNome(),
+                        nomeDoAluno(i),
                         i.getUniforme().getTipoUniforme().getTipo(),
                         i.getUniforme().getTamanho().name(),
-                        i.getUniforme().getSexo().name(),
-                        String.valueOf(i.getQuantidade())
+                        rotulo(i.getUniforme().getSexo()),
+                        numero(i.getQuantidade())
                 ))
                 .toList();
 
         int totalSaida = itens.stream().mapToInt(PedidoUniforme::getQuantidade).sum();
 
-        return pdfTableBuilder.gerarPdf(
+        return gerar(formato,
                 "Relatório de Saída de Uniformes",
                 descricaoPeriodo(periodo),
                 List.of("Data", "Aluno", "Tipo", "Tamanho", "Sexo", "Quantidade"),
                 linhas,
-                List.of("Total de saídas: " + totalSaida + " unidades")
+                List.of("Total de saídas: " + unidades(totalSaida))
         );
     }
 
-    public byte[] gerarRelatorioEntregasPorTurma(RelatorioFiltroDTO filtro, UUID turmaId) {
+    public byte[] gerarRelatorioEntregasPorTurma(RelatorioFiltroDTO filtro, UUID turmaId, FormatoRelatorio formato) {
         Periodo periodo = periodoResolver.resolver(filtro);
 
         List<PedidoUniforme> itens = turmaId == null
                 ? pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim())
                 : pedidoUniformeService.buscarItensPorPeriodoETurma(periodo.inicio(), periodo.fim(), turmaId);
 
-        if (itens.isEmpty()) {
-            throw new NotFoundException("Não há entregas de uniformes para a turma no período informado");
-        }
 
         /* Turma, depois aluno, depois data: é como a secretaria confere a lista,
            varrendo uma turma inteira antes de passar para a próxima. */
         List<PedidoUniforme> ordenados = itens.stream()
                 .sorted(Comparator.comparing(this::nomeDaTurma)
-                        .thenComparing(i -> i.getPedido().getAluno().getNome())
+                        .thenComparing(i -> nomeDoAluno(i))
                         .thenComparing(i -> i.getPedido().getDataEfetivada()))
                 .toList();
 
         List<List<String>> linhas = ordenados.stream()
                 .map(i -> List.of(
                         nomeDaTurma(i),
-                        i.getPedido().getAluno().getNome(),
+                        nomeDoAluno(i),
                         i.getPedido().getDataEfetivada().format(FORMATO_DATA),
                         i.getUniforme().getTipoUniforme().getTipo(),
                         i.getUniforme().getTamanho().name(),
-                        i.getUniforme().getSexo().name(),
-                        String.valueOf(i.getQuantidade())
+                        rotulo(i.getUniforme().getSexo()),
+                        numero(i.getQuantidade())
                 ))
                 .toList();
 
-        return pdfTableBuilder.gerarPdf(
+        return gerar(formato,
                 "Relatório de Entregas por Turma",
                 descricaoPeriodo(periodo),
                 List.of("Turma", "Aluno", "Data", "Tipo", "Tamanho", "Sexo", "Quantidade"),
@@ -171,27 +167,32 @@ public class RelatorioService {
 
         List<String> totais = new ArrayList<>();
         for (Map.Entry<String, Integer> entrada : porTurma.entrySet()) {
-            totais.add(entrada.getKey() + ": " + entrada.getValue() + " unidades");
+            totais.add(entrada.getKey() + ": " + unidades(entrada.getValue()));
         }
 
         int totalGeral = itens.stream().mapToInt(PedidoUniforme::getQuantidade).sum();
-        totais.add("Total de entregas: " + totalGeral + " unidades");
+        totais.add("Total de entregas: " + unidades(totalGeral));
 
         return totais;
     }
 
-    private String nomeDaTurma(PedidoUniforme item) {
-        return item.getPedido().getAluno().getTurma().getNome();
+    /* O aluno pode não carregar (registro antigo excluído); o relatório de
+       prestação de contas não pode cair por causa de uma linha. */
+    private String nomeDoAluno(PedidoUniforme item) {
+        var aluno = item.getPedido().getAluno();
+        return aluno != null ? aluno.getNome() : "Aluno removido";
     }
 
-    public byte[] gerarRelatorioTransacoes(RelatorioFiltroDTO filtro) {
+    private String nomeDaTurma(PedidoUniforme item) {
+        var aluno = item.getPedido().getAluno();
+        return aluno != null && aluno.getTurma() != null ? aluno.getTurma().getNome() : "Sem turma";
+    }
+
+    public byte[] gerarRelatorioTransacoes(RelatorioFiltroDTO filtro, FormatoRelatorio formato) {
         Periodo periodo = periodoResolver.resolver(filtro);
         List<ItemLote> entradas = itemLoteService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim());
         List<PedidoUniforme> saidas = pedidoUniformeService.buscarItensPorPeriodo(periodo.inicio(), periodo.fim());
 
-        if (entradas.isEmpty() && saidas.isEmpty()) {
-            throw new NotFoundException("Não há transações de uniformes no período informado");
-        }
 
         List<TransacaoLinha> transacoes = new ArrayList<>();
 
@@ -199,7 +200,7 @@ public class RelatorioService {
             transacoes.add(new TransacaoLinha(
                     item.getLote().getDataEntrega(),
                     "ENTRADA",
-                    item.getTipoUniforme().getTipo() + " (" + item.getTamanho() + "/" + item.getSexo() + ")",
+                    item.getTipoUniforme().getTipo() + " (" + item.getTamanho() + "/" + rotulo(item.getSexo()) + ")",
                     item.getQuantidade()
             ));
         }
@@ -208,7 +209,7 @@ public class RelatorioService {
             transacoes.add(new TransacaoLinha(
                     item.getPedido().getDataEfetivada(),
                     "SAÍDA",
-                    item.getUniforme().getTipoUniforme().getTipo() + " (" + item.getUniforme().getTamanho() + "/" + item.getUniforme().getSexo() + ")",
+                    item.getUniforme().getTipoUniforme().getTipo() + " (" + item.getUniforme().getTamanho() + "/" + rotulo(item.getUniforme().getSexo()) + ")",
                     item.getQuantidade()
             ));
         }
@@ -219,7 +220,7 @@ public class RelatorioService {
                         t.data().format(FORMATO_DATA),
                         t.tipo(),
                         t.descricao(),
-                        String.valueOf(t.quantidade())
+                        numero(t.quantidade())
                 ))
                 .toList();
 
@@ -227,23 +228,54 @@ public class RelatorioService {
         int totalSaida = saidas.stream().mapToInt(PedidoUniforme::getQuantidade).sum();
         int saldo = totalEntrada - totalSaida;
 
-        return pdfTableBuilder.gerarPdf(
+        return gerar(formato,
                 "Relatório de Transações de Uniformes",
                 descricaoPeriodo(periodo),
                 List.of("Data", "Tipo", "Descrição", "Quantidade"),
                 linhas,
                 List.of(
-                        "Total de entradas: " + totalEntrada + " unidades",
-                        "Total de saídas: " + totalSaida + " unidades",
-                        "Saldo do período: " + (saldo >= 0 ? "+" : "") + saldo + " unidades"
+                        "Total de entradas: " + unidades(totalEntrada),
+                        "Total de saídas: " + unidades(totalSaida),
+                        "Saldo do período: " + (saldo >= 0 ? "+" : "") + unidades(saldo)
                 )
         );
+    }
+
+    /* Os dois formatos recebem a mesma tabela: o CSV é o PDF que abre no Excel. */
+    private byte[] gerar(FormatoRelatorio formato, String titulo, String descricaoPeriodo, List<String> cabecalhos,
+                         List<List<String>> linhas, List<String> totais) {
+        return switch (formato) {
+            case PDF -> pdfTableBuilder.gerarPdf(titulo, descricaoPeriodo, cabecalhos, linhas, totais);
+            case CSV -> csvTableBuilder.gerarCsv(titulo, descricaoPeriodo, cabecalhos, linhas, totais);
+        };
+    }
+
+    /** Inteiro com separador de milhar pt-BR ("1.234"), que o Excel em português lê como número. */
+    private String numero(int valor) {
+        return String.format(PT_BR, "%,d", valor);
+    }
+
+    private String unidades(int valor) {
+        return numero(valor) + " unidades";
     }
 
     private String descricaoPeriodo(Periodo periodo) {
         return "Período: " + periodo.inicio().format(FORMATO_DATA) + " a " + periodo.fim().format(FORMATO_DATA);
     }
 
-    private record TransacaoLinha(java.time.LocalDateTime data, String tipo, String descricao, Integer quantidade) {
+    /* Relatório é lido por gente (e pelo Excel): rótulos da tela, não o nome do enum. */
+    static String rotulo(com.six_m.uniform.shared.enums.Sexo sexo) {
+        return sexo == com.six_m.uniform.shared.enums.Sexo.MASCULINO ? "Masculino" : "Feminino";
+    }
+
+    static String rotulo(com.six_m.uniform.domain.uniforme.SituacaoEstoque situacao) {
+        return switch (situacao) {
+            case ESGOTADO -> "Esgotado";
+            case BAIXO -> "Baixo";
+            case OK -> "OK";
+        };
+    }
+
+    private record TransacaoLinha(LocalDateTime data, String tipo, String descricao, Integer quantidade) {
     }
 }

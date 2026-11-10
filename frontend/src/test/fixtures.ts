@@ -3,8 +3,16 @@ import type { TipoUniforme } from '@/lib/types/tipo-uniforme'
 import type { Turma } from '@/lib/types/turma'
 import type { Uniforme } from '@/lib/types/uniforme'
 
-export const maria: Aluno = { id: 'a1', nome: 'Maria Silva', turmaId: 't1', turmaNome: '9º Ano A' }
-export const joao: Aluno = { id: 'a2', nome: 'João Conceição', turmaId: 't2', turmaNome: '6º Ano B' }
+export const maria: Aluno = { id: 'a1', nome: 'Maria Silva', turmaId: 't1', turmaNome: '9º Ano A', ativo: true }
+export const joao: Aluno = { id: 'a2', nome: 'João Conceição', turmaId: 't2', turmaNome: '6º Ano B', ativo: true }
+export const pedro: Aluno = {
+  id: 'a3',
+  nome: 'Pedro Alves',
+  turmaId: 't1',
+  turmaNome: '9º Ano A',
+  ativo: false,
+  dataSaida: '2026-03-15T09:00:00',
+}
 
 export const turmaA: Turma = { id: 't1', nome: '9º Ano A', turno: 'DIURNO', ensino: 'FUNDAMENTAL', quantidadeAlunos: 1 }
 export const turmaB: Turma = { id: 't2', nome: '6º Ano B', turno: 'VESPERTINO', ensino: 'FUNDAMENTAL', quantidadeAlunos: 1 }

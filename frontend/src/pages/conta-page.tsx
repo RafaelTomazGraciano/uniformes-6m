@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { useAuth } from '@/hooks/use-auth'
@@ -46,7 +46,7 @@ export function ContaPage() {
 
   const formSenha = useForm<TrocarSenhaFormValues>({
     resolver: zodResolver(trocarSenhaSchema),
-    defaultValues: { email: '', novaSenha: '', confirmarSenha: '' },
+    defaultValues: { email: '', senhaAtual: '', novaSenha: '', confirmarSenha: '' },
   })
 
   /* Não existe GET /usuario/me: o login só devolve o token, e o nome guardado na
@@ -62,11 +62,20 @@ export function ContaPage() {
 
     try {
       const usuario = await atualizarUsuario(valores)
-      sincronizarSessao({ id: usuario.idUsuario, name: usuario.nome, email: usuario.email })
-      toast.success('Dados atualizados.')
+
+      /* O token carrega o e-mail antigo e o backend passa a recusá-lo (401). Sem a senha
+         não dá para renovar sozinho, então encerra a sessão já, com uma mensagem clara. */
+      if (mesmoEmail(usuario.email, session?.user.email)) {
+        sincronizarSessao({ id: usuario.idUsuario, name: usuario.nome, email: usuario.email })
+        toast.success('Dados atualizados.')
+        setSalvandoDados(false)
+      } else {
+        toast.success('E-mail alterado. Entre novamente com o novo e-mail.')
+        logout()
+        navigate('/login', { replace: true })
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível salvar.')
-    } finally {
       setSalvandoDados(false)
     }
   }
@@ -75,8 +84,8 @@ export function ContaPage() {
     setSalvandoSenha(true)
 
     try {
-      await trocarSenha({ email: valores.email, novaSenha: valores.novaSenha })
-      formSenha.reset({ email: valores.email, novaSenha: '', confirmarSenha: '' })
+      await trocarSenha({ email: valores.email, senhaAtual: valores.senhaAtual, novaSenha: valores.novaSenha })
+      formSenha.reset({ email: valores.email, senhaAtual: '', novaSenha: '', confirmarSenha: '' })
       toast.success('Senha alterada. Use a nova no próximo login.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível trocar a senha.')
@@ -101,6 +110,8 @@ export function ContaPage() {
 
   const errosDados = formDados.formState.errors
   const errosSenha = formSenha.formState.errors
+  const emailDigitado = formDados.watch('email')
+  const trocandoEmail = Boolean(session) && !mesmoEmail(emailDigitado, session?.user.email)
   const emailConfirmado = confirmacaoEmail.trim().toLowerCase() === (session?.user.email ?? '').toLowerCase()
 
   return (
@@ -123,6 +134,9 @@ export function ContaPage() {
                   aria-invalid={Boolean(errosDados.email) || undefined}
                   {...formDados.register('email')}
                 />
+                {trocandoEmail && (
+                  <FieldDescription>Ao trocar o e-mail você precisará entrar novamente.</FieldDescription>
+                )}
                 <FieldError errors={[errosDados.email]} />
               </Field>
               <Button type="submit" size="lg" className="self-start" disabled={salvandoDados}>
@@ -135,6 +149,16 @@ export function ContaPage() {
         <Secao titulo="Senha" descricao="Pelo menos 6 caracteres. A nova senha vale a partir do próximo login.">
           <form onSubmit={formSenha.handleSubmit(salvarSenha)} noValidate>
             <FieldGroup>
+              <Field data-invalid={Boolean(errosSenha.senhaAtual) || undefined}>
+                <FieldLabel htmlFor="senhaAtual">Senha atual</FieldLabel>
+                <CampoSenha
+                  id="senhaAtual"
+                  autoComplete="current-password"
+                  invalido={Boolean(errosSenha.senhaAtual)}
+                  {...formSenha.register('senhaAtual')}
+                />
+                <FieldError errors={[errosSenha.senhaAtual]} />
+              </Field>
               <Field data-invalid={Boolean(errosSenha.novaSenha) || undefined}>
                 <FieldLabel htmlFor="novaSenha">Nova senha</FieldLabel>
                 <CampoSenha id="novaSenha" invalido={Boolean(errosSenha.novaSenha)} {...formSenha.register('novaSenha')} />
@@ -214,6 +238,11 @@ function Secao({ titulo, descricao, perigo, children }: { titulo: string; descri
       <div className="max-w-lg">{children}</div>
     </section>
   )
+}
+
+function mesmoEmail(a: string | undefined, b: string | undefined) {
+  // Comparação exata: o backend busca o usuário do token pelo e-mail tal como foi gravado.
+  return (a ?? '').trim() === (b ?? '').trim()
 }
 
 function CampoSenha({ invalido, ...props }: React.ComponentProps<'input'> & { invalido: boolean }) {

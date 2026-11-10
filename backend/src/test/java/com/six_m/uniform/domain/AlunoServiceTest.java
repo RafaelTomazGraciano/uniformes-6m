@@ -6,8 +6,10 @@ import com.six_m.uniform.domain.aluno.AlunoService;
 import com.six_m.uniform.domain.aluno.dto.RequestAtualizarAlunoDTO;
 import com.six_m.uniform.domain.aluno.dto.RequestCriarAlunoDTO;
 import com.six_m.uniform.domain.aluno.dto.ResponseAlunoDTO;
+import com.six_m.uniform.domain.pedido.PedidoRepository;
 import com.six_m.uniform.domain.turma.Turma;
 import com.six_m.uniform.domain.turma.TurmaRepository;
+import com.six_m.uniform.exception.BadRequestException;
 import com.six_m.uniform.exception.NotFoundException;
 import com.six_m.uniform.shared.dto.MessageResponseDTO;
 import com.six_m.uniform.shared.enums.Ensino;
@@ -21,7 +23,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +41,9 @@ public class AlunoServiceTest {
 
     @Mock
     private TurmaRepository turmaRepository;
+
+    @Mock
+    private PedidoRepository pedidoRepository;
 
     @InjectMocks
     private AlunoService alunoService;
@@ -107,10 +114,10 @@ public class AlunoServiceTest {
         Aluno aluno2 = Aluno.builder().id(UUID.randomUUID()).nome("Maria").turma(turma).build();
 
         Pageable pageable = PageRequest.of(0, 10);
-        when(alunoRepository.findAll(pageable))
+        when(alunoRepository.findAll(any(Specification.class), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(aluno1, aluno2), pageable, 2));
 
-        var resultado = alunoService.buscarTodosAlunos(pageable);
+        var resultado = alunoService.buscarTodosAlunos(null, null, null, pageable);
 
         assertEquals(2, resultado.getTotalElements());
         assertEquals("João", resultado.getContent().get(0).nome());
@@ -120,10 +127,10 @@ public class AlunoServiceTest {
     @Test
     void deveRetornarPaginaVaziaQuandoNaoHaAlunos() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(alunoRepository.findAll(pageable))
+        when(alunoRepository.findAll(any(Specification.class), eq(pageable)))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        var resultado = alunoService.buscarTodosAlunos(pageable);
+        var resultado = alunoService.buscarTodosAlunos("zzzz", null, true, pageable);
 
         assertTrue(resultado.isEmpty());
         assertEquals(0, resultado.getTotalElements());
@@ -223,10 +230,109 @@ public class AlunoServiceTest {
 
         when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
 
+        when(pedidoRepository.existsByAlunoId(id)).thenReturn(false);
+
         MessageResponseDTO resultado = alunoService.deletarAluno(id);
 
         assertEquals("Aluno deletado com sucesso", resultado.message());
         verify(alunoRepository).delete(aluno);
+    }
+
+    @Test
+    void deveRecusarExclusaoQuandoAlunoTemEntregas() {
+        UUID id = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(id).nome("João").turma(turmaA()).build();
+
+        when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
+        when(pedidoRepository.existsByAlunoId(id)).thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> alunoService.deletarAluno(id));
+
+        assertEquals("Este aluno tem entregas registradas. Use 'Registrar saída' para manter o histórico.", exception.getMessage());
+        verify(alunoRepository, never()).delete(any(Aluno.class));
+    }
+
+    @Test
+    void deveRegistrarSaidaMantendoOCadastro() {
+        UUID id = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(id).nome("João").turma(turmaA()).build();
+
+        when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
+        when(alunoRepository.save(any(Aluno.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocalDateTime antes = LocalDateTime.now();
+        ResponseAlunoDTO response = alunoService.registrarSaida(id);
+
+        assertFalse(response.ativo());
+        assertNotNull(response.dataSaida());
+        assertFalse(response.dataSaida().isBefore(antes));
+        assertFalse(aluno.isAtivo());
+        verify(alunoRepository, never()).delete(any(Aluno.class));
+    }
+
+    @Test
+    void deveRecusarSaidaDeAlunoJaDesligado() {
+        UUID id = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(id).nome("João").turma(turmaA())
+                .ativo(false).dataSaida(LocalDateTime.of(2026, 3, 1, 10, 0)).build();
+
+        when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
+
+        assertThrows(BadRequestException.class, () -> alunoService.registrarSaida(id));
+        verify(alunoRepository, never()).save(any());
+    }
+
+    @Test
+    void deveLancarExcecaoQuandoAlunoNaoExisteAoRegistrarSaida() {
+        UUID id = UUID.randomUUID();
+        when(alunoRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> alunoService.registrarSaida(id));
+    }
+
+    @Test
+    void deveReativarAlunoDesligado() {
+        UUID id = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(id).nome("João").turma(turmaA())
+                .ativo(false).dataSaida(LocalDateTime.of(2026, 3, 1, 10, 0)).build();
+
+        when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
+        when(alunoRepository.save(any(Aluno.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseAlunoDTO response = alunoService.reativarAluno(id);
+
+        assertTrue(response.ativo());
+        assertNull(response.dataSaida());
+    }
+
+    @Test
+    void deveRecusarReativarAlunoJaAtivo() {
+        UUID id = UUID.randomUUID();
+        Aluno aluno = Aluno.builder().id(id).nome("João").turma(turmaA()).build();
+
+        when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
+
+        assertThrows(BadRequestException.class, () -> alunoService.reativarAluno(id));
+        verify(alunoRepository, never()).save(any());
+    }
+
+    @Test
+    void deveExporSituacaoDoAlunoNaResposta() {
+        UUID id = UUID.randomUUID();
+        LocalDateTime saida = LocalDateTime.of(2026, 3, 1, 10, 0);
+        Aluno aluno = Aluno.builder().id(id).nome("João").turma(turmaA()).ativo(false).dataSaida(saida).build();
+
+        when(alunoRepository.findById(id)).thenReturn(Optional.of(aluno));
+
+        ResponseAlunoDTO response = alunoService.buscarAluno(id);
+
+        assertFalse(response.ativo());
+        assertEquals(saida, response.dataSaida());
+    }
+
+    private static Turma turmaA() {
+        return Turma.builder().id(UUID.randomUUID()).nome("Turma A").turno(Turno.DIURNO).ensino(Ensino.FUNDAMENTAL).build();
     }
 
     @Test
@@ -238,6 +344,12 @@ public class AlunoServiceTest {
                 () -> alunoService.deletarAluno(id));
 
         assertTrue(exception.getMessage().contains(id.toString()));
-        verify(alunoRepository, never()).delete(any());
+        verify(alunoRepository, never()).delete(any(Aluno.class));
+    }
+
+    @Test
+    void deveNormalizarTermoDeBuscaIgnorandoAcentosECaixa() {
+        assertEquals("joao conceicao", com.six_m.uniform.domain.aluno.AlunoSpecifications.normalizar("  JOÃO Conceição "));
+        assertEquals("", com.six_m.uniform.domain.aluno.AlunoSpecifications.normalizar(null));
     }
 }

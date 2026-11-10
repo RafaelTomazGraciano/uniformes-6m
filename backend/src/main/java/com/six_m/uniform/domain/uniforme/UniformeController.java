@@ -1,5 +1,6 @@
 package com.six_m.uniform.domain.uniforme;
 
+import com.six_m.uniform.domain.uniforme.dto.ResponseEstoquePainelDTO;
 import com.six_m.uniform.domain.uniforme.dto.ResponseUniformeDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -34,6 +36,16 @@ public class UniformeController {
     })
     public ResponseEntity<Page<ResponseUniformeDTO>> buscarTodosUniformes(@ParameterObject Pageable pageable) {
         return ResponseEntity.ok(uniformeService.buscarTodosUniformes(pageable));
+    }
+
+    @GetMapping("/painel")
+    @Operation(summary = "Painel de estoque", description = "Lê a view vw_estoque: cada combinação de tipo, tamanho e sexo com a quantidade, o limite de estoque baixo do tipo e a situação calculada (ESGOTADO com 0 peças, BAIXO quando a quantidade é menor ou igual ao limite, OK acima dele). Ordenado por tipo, tamanho e sexo")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Painel retornado com sucesso (lista vazia quando não há estoque)"),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido ou expirado")
+    })
+    public ResponseEntity<List<ResponseEstoquePainelDTO>> buscarPainelEstoque() {
+        return ResponseEntity.ok(uniformeService.buscarPainelEstoque());
     }
 
     @GetMapping("{id}")

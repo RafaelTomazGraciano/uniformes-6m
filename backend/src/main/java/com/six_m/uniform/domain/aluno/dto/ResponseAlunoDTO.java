@@ -1,5 +1,6 @@
 package com.six_m.uniform.domain.aluno.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record ResponseAlunoDTO(
@@ -8,5 +9,7 @@ public record ResponseAlunoDTO(
         String nomeResponsavel,
         String telefoneResponsavel,
         UUID turmaId,
-        String turmaNome
+        String turmaNome,
+        boolean ativo,
+        LocalDateTime dataSaida
 ) {}

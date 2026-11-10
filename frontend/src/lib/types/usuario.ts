@@ -11,5 +11,6 @@ export type AtualizarUsuarioPayload = {
 
 export type TrocarSenhaPayload = {
   email: string
+  senhaAtual: string
   novaSenha: string
 }
